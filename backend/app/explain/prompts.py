@@ -193,6 +193,7 @@ Return ONLY {{"strings": [...]}} with exactly {n} items, in the same order."""
 def build_judge_prompt(doc_type: DocType, clauses: list[tuple[int, str]]) -> tuple[str, str]:
     system = "\n".join([JUDGE_RULES, CHECKLISTS[doc_type], JUDGE_SHAPE])
     user = "CLAUSES:\n" + "\n".join(f"[{i}] {t}" for i, t in clauses)
+    user += "\n\nAnswer in ENGLISH only (title, meaning and why), even though the clauses are Korean."
     return system, user
 
 

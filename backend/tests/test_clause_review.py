@@ -45,7 +45,10 @@ class RoutingLLM(LLMClient):
             self.calls["judge"] += 1
             items = []
             for line in user.splitlines()[1:]:
-                cid = int(re.match(r"\[(\d+)\]", line).group(1))
+                m = re.match(r"\[(\d+)\]", line)
+                if not m:
+                    continue
+                cid = int(m.group(1))
                 if cid in self.drop_ids:
                     continue
                 bad = self.high_phrase in line
@@ -103,7 +106,7 @@ def test_judge_flags_only_concerning_clauses_with_verbatim_quote():
 
 
 def reviewed(clauses):
-    return [c for c in clauses if c.kind != "article"]
+    return [c for c in clauses if c.kind not in ("article", "notice")]
 
 
 def test_judge_retries_unanswered_clauses_then_reports_leftovers():

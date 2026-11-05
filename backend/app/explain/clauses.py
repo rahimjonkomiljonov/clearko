@@ -19,6 +19,7 @@ MAX_CLAUSES = 90
 
 ARTICLE = "article"  # printed 제N조 body of a standard form
 SPECIAL = "special"  # hand-written special terms (특약사항)
+NOTICE = "notice"  # attachments after the contract: broker sheet, legal information
 OTHER = "other"
 _ARTICLE_START = re.compile(r"^제\s*\d+\s*조")
 
@@ -44,10 +45,12 @@ def split_clauses(text: str) -> list[Clause]:
     buf: list[str] = []
     in_special = False
     in_article = False  # set by the first 제N조 line, cleared by the special terms
+    after_contract = False  # set once the special terms / signature block is over
 
     def flush() -> None:
         if buf:
-            chunks.append((" ".join(buf).strip(), ARTICLE if in_article else OTHER))
+            kind = NOTICE if after_contract else ARTICLE if in_article else OTHER
+            chunks.append((" ".join(buf).strip(), kind))
             buf.clear()
 
     for raw in text.splitlines():
@@ -63,6 +66,7 @@ def split_clauses(text: str) -> list[Clause]:
             if any(m in sq for m in _SPECIAL_END):
                 in_special = False
                 flush()
+                after_contract = True
                 continue
             flush()  # one handwritten special term per line
             chunks.append((line, SPECIAL))
@@ -77,7 +81,7 @@ def split_clauses(text: str) -> list[Clause]:
     useful = [(c, k) for c, k in chunks if _useful(c)]
     if not any(k == SPECIAL for _, k in useful):
         # No special-terms section was found, so we cannot tell where the printed form ends:
-        # do not treat anything as a standard printed article.
+        # do not treat anything as a standard printed article or an attachment.
         useful = [(c, OTHER) for c, _ in useful]
     return [Clause(i, c, k) for i, (c, k) in enumerate(useful[:MAX_CLAUSES], 1)]
 

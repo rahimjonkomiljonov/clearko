@@ -100,12 +100,28 @@ cd backend && python -m pytest -q
 Synthetic documents are made by `eval/tools/make_synthetic_parttime.py` (fake names; the planted
 problems are listed in `eval/data/synthetic/*_expected.md`).
 
+**Local model comparison** (same prompts, same documents; set `LLM_MODEL` to switch):
+
+| | `qwen2.5:7b` (default) | `exaone3.5:7.8b` (LG, Korean-specialist, non-commercial licence) |
+|---|---|---|
+| Rental summary | good | slightly more accurate |
+| Part-time contract, time | 44 s | 78 s |
+| Planted special terms (uniform deduction, deposit, NDA) | all found | missed in that run |
+| Duplicate flags next to rule flags | rare | several |
+| Student form summary | correct | said "within legal parameters" for an illegal form |
+
+EXAONE reads Korean better but follows the instructions less well, so it is not the default.
+
+**Fixed along the way:** the "sublet" mistake was caused by our own prompt, which said "do not call
+it a sublet": the model repeated the word. Telling it the plain fact (the landlord rents directly to
+the tenant) removed it. Lesson: never name the wrong answer in a prompt.
+
 **Known weaknesses** (to be measured properly in Milestone 4):
-- The small local model sometimes gets the *story* wrong: it called the basement rental a
-  "sublet", and its explanation of the broker-fee clause is garbled. The quoted Korean and the
-  numbers are right; the English around them is not always.
-- **Blank forms are over-flagged**: the printed explanation of penalties on an empty student work
-  form is reported as a problem (2 HIGH flags on a blank form).
+- The small local model sometimes gets the *story* wrong: the explanation of the broker-fee clause
+  is sometimes garbled. The quoted Korean and the numbers are right; the English around them is
+  not always.
+- **Blank forms** (templates with empty slots) are detected from the PDF text layer and get a
+  warning instead of red flags. A *photo* of a blank form is not detected yet.
 - Severity from the model varies between runs for the same clause. Keyword floors fix the
   broker-fee, eviction and penalty clauses only.
 - Nothing here has been checked by a Korean reader yet. A Korean speaker must verify the OCR and

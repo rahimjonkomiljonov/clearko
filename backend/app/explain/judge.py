@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ValidationError
 
-from .clauses import ARTICLE, SPECIAL, Clause, batch_clauses
+from .clauses import ARTICLE, NOTICE, SPECIAL, Clause, batch_clauses
 from .llm_client import LLMClient
 from .parse import ParseError, extract_json
 from .prompts import build_judge_prompt
@@ -27,6 +27,8 @@ class ClauseBatch(BaseModel):
 
 
 _HAN = re.compile(r"[一-鿿㐀-䶿]")  # Chinese ideographs: the model drifts into them
+_HANGUL = re.compile(r"[가-힣]")
+MAX_HANGUL = 12  # a short quoted term is fine, a Korean sentence is not
 
 
 def _parse_batch(raw: str) -> list[ClauseJudgement]:
@@ -35,8 +37,11 @@ def _parse_batch(raw: str) -> list[ClauseJudgement]:
     except ValidationError as e:
         raise ParseError(f"JSON does not match the schema: {e.errors()[0]['msg']}") from None
     for item in items:
-        if _HAN.search(f"{item.title}{item.meaning}{item.why}"):
+        text = f"{item.title}{item.meaning}{item.why}"
+        if _HAN.search(text):
             raise ParseError("The answer contains Chinese text. Write ONLY in English")
+        if len(_HANGUL.findall(text)) > MAX_HANGUL:
+            raise ParseError("The answer is in Korean. Write title, meaning and why in ENGLISH")
     return items
 
 
@@ -100,11 +105,11 @@ def judge_clauses(
 ) -> tuple[list[RedFlag], list[int]]:
     """Return (red flags in document order, ids of clauses the model never answered).
 
-    Printed standard articles are not reviewed: the 7B model explained them wrongly (it said a
+    Printed standard articles and attached notices are not reviewed: the 7B model explained them wrongly (it said a
     landlord "cannot terminate" under a clause that says the landlord can), and a wrong
     explanation is worse than none. The risks are in the hand-written and other clauses.
     """
-    clauses = [c for c in clauses if c.kind != ARTICLE]
+    clauses = [c for c in clauses if c.kind not in (ARTICLE, NOTICE)]
     by_id = {c.id: c for c in clauses}
     judged: dict[int, ClauseJudgement] = {}
 

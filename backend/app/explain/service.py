@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .clauses import ARTICLE, split_clauses
+from .clauses import ARTICLE, NOTICE, split_clauses
 from .judge import judge_clauses
 from .llm_client import LLMClient
 from .parse import ParseError, parse_output, verify_numbers, verify_quotes
@@ -93,11 +93,11 @@ def explain(
             client, doc_type, clauses, lambda n, total: stage(f"reviewing clauses {n}/{total}")
         )
         output.red_flags = _select_flags(_dedupe(flags))
-        skipped = sum(c.kind == ARTICLE for c in clauses)
+        skipped = sum(c.kind in (ARTICLE, NOTICE) for c in clauses)
         if skipped:
             warnings.append(
-                f"{skipped} printed standard article(s) of the form were not analysed one by one; "
-                "red flags come from the added and other clauses."
+                f"{skipped} clause(s) of the printed form and attached notices were not analysed one "
+                "by one; red flags come from the clauses added to this contract."
             )
         if unanswered:
             warnings.append(f"{len(unanswered)} clause(s) could not be reviewed automatically")
