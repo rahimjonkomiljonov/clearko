@@ -32,6 +32,7 @@ class KeyFact(BaseModel):
     value: str
     original_text: str | None = None  # verbatim from the scan, when the fact comes from a clause
     quote_verified: bool = False
+    numbers_verified: bool = True  # False if value contains a number not found in the scan
 
 
 class RedFlag(BaseModel):
@@ -39,6 +40,7 @@ class RedFlag(BaseModel):
     explanation: str
     original_text: str | None = None
     quote_verified: bool = False
+    numbers_verified: bool = True
     severity: Severity = Severity.MEDIUM
 
 

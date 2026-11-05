@@ -47,33 +47,95 @@ def parse_output(raw: str) -> LLMOutput:
 
 def _squash(text: str) -> str:
     """Remove whitespace and common punctuation: OCR drops/adds spaces, so compare without them."""
-    return re.sub(r"[\s·.,;:·'\"“”‘’()\[\]]+", "", text)
+    return "".join(c for c in text if not _SKIP.match(c))
+
+
+_SKIP = re.compile(r"[\s·.,;:'\"“”‘’()\[\]]")
+
+
+def _squash_with_map(text: str) -> tuple[str, list[int]]:
+    """Squashed text plus, for each squashed char, its index in the original text."""
+    chars, index = [], []
+    for i, c in enumerate(text):
+        if not _SKIP.match(c):
+            chars.append(c)
+            index.append(i)
+    return "".join(chars), index
+
+
+def locate_quote(quote: str, source: str, min_ratio: float = 0.85) -> str | None:
+    """Return the passage of `source` that the quote refers to, exactly as written in the source.
+
+    Tolerates whitespace/punctuation differences and small OCR or rewording errors. Returns None
+    if no passage matches well enough, so a made-up quote is never shown as original text.
+    """
+    q = _squash(quote)
+    s, index = _squash_with_map(source)
+    if not q or not s:
+        return None
+    pos = s.find(q)
+    if pos >= 0:
+        last = pos + len(q) - 1
+    else:
+        if len(q) < 6:  # too short for fuzzy matching to mean anything
+            return None
+        # Anchor on the longest common block, then score the whole region around it, so one
+        # inserted/dropped character does not split the quote into two failed halves.
+        anchor = SequenceMatcher(None, q, s, autojunk=False).find_longest_match(0, len(q), 0, len(s))
+        start = max(0, anchor.b - anchor.a)
+        window = s[start : start + len(q) + len(q) // 4]
+        blocks = [b for b in SequenceMatcher(None, q, window, autojunk=False).get_matching_blocks() if b.size]
+        if not blocks or sum(b.size for b in blocks) / len(q) < min_ratio:
+            return None
+        pos = start + blocks[0].b
+        last = start + blocks[-1].b + blocks[-1].size - 1
+    return source[index[pos] : index[last] + 1]
 
 
 def quote_in_text(quote: str, source: str, min_ratio: float = 0.85) -> bool:
-    """True if the quote appears in the source, tolerating whitespace and small OCR errors."""
-    q, s = _squash(quote), _squash(source)
-    if not q:
-        return False
-    if q in s:
-        return True
-    if len(q) < 6:  # too short for fuzzy matching to mean anything
-        return False
-    match = SequenceMatcher(None, q, s, autojunk=False).find_longest_match(0, len(q), 0, len(s))
-    return match.size / len(q) >= min_ratio
+    return locate_quote(quote, source, min_ratio) is not None
 
 
 def verify_quotes(output: LLMOutput, source_text: str) -> int:
-    """Mark each original_text as verified or not. Returns the number of unverified quotes.
+    """Replace each original_text with the matching passage of the scan, or mark it unverified.
 
-    A model quote that is not in the scan is never shown as if it were the original.
+    Returns the number of quotes that could not be found. A quote that is not in the scan is
+    never shown as if it were the original.
     """
     unverified = 0
     for item in [*output.key_facts, *output.red_flags]:
         if item.original_text is None or not item.original_text.strip():
             item.original_text = None
             continue
-        item.quote_verified = quote_in_text(item.original_text, source_text)
-        if not item.quote_verified:
+        found = locate_quote(item.original_text, source_text)
+        item.quote_verified = found is not None
+        if found is not None:
+            item.original_text = found
+        else:
             unverified += 1
     return unverified
+
+
+_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+
+
+def numbers_in(text: str) -> set[str]:
+    """Numbers as digit strings without thousands separators: '5,000,000원' -> '5000000'."""
+    return {m.group().rstrip(",").replace(",", "") for m in _NUMBER.finditer(text)}
+
+
+def verify_numbers(output: LLMOutput, source_text: str) -> int:
+    """Flag items that state a number which does not occur anywhere in the scan.
+
+    Catches the worst LLM failure for this app: a plausible but wrong amount or date.
+    Returns the number of flagged items.
+    """
+    known = numbers_in(source_text)
+    flagged = 0
+    for fact in output.key_facts:
+        fact.numbers_verified = numbers_in(fact.value) <= known
+        flagged += not fact.numbers_verified
+    for flag in output.red_flags:
+        flag.numbers_verified = numbers_in(f"{flag.title} {flag.explanation}") <= known
+        flagged += not flag.numbers_verified
+    return flagged

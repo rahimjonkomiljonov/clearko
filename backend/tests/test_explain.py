@@ -3,7 +3,16 @@ import json
 import pytest
 
 from app.explain import DocType, LLMClient, classify, explain
-from app.explain.parse import ParseError, extract_json, parse_output, quote_in_text, verify_quotes
+from app.explain.parse import (
+    ParseError,
+    extract_json,
+    locate_quote,
+    numbers_in,
+    parse_output,
+    quote_in_text,
+    verify_numbers,
+    verify_quotes,
+)
 from app.explain.prompts import LANGUAGE_NAMES, build_prompt
 from app.explain.schemas import DISCLAIMER, LLMOutput
 
@@ -176,3 +185,60 @@ def test_explain_warns_about_hallucinated_quotes_and_low_ocr_confidence():
     res = explain(SOURCE, DocType.RENTAL, "en", FakeLLM([json.dumps(bad)]), ocr_confidence=0.6)
     assert len(res.warnings) == 2
     assert res.red_flags[0].quote_verified is False
+
+
+# ---------- number verification ----------
+def test_numbers_in_ignores_thousands_separators():
+    assert numbers_in("5,000,000원 and 450,000 won, 12 months, 1.5%") == {"5000000", "450000", "12", "1.5"}
+    assert numbers_in("no digits") == set()
+
+
+def test_wrong_number_in_value_is_flagged():
+    """Real failure seen with the local model: quote says 7700 won, value said 8,000 KRW."""
+    source = "SIM card fee: 7700 won (one-time deduction)"
+    out = parse_output(json.dumps({
+        "summary": "x",
+        "key_facts": [
+            {"label": "SIM fee", "value": "8,000 KRW", "original_text": "SIM card fee: 7700 won"},
+            {"label": "SIM fee ok", "value": "7,700 KRW"},
+        ],
+    }))
+    assert verify_numbers(out, source) == 1
+    assert out.key_facts[0].numbers_verified is False
+    assert out.key_facts[1].numbers_verified is True
+
+
+def test_red_flag_with_invented_number_is_flagged():
+    out = parse_output(json.dumps({
+        "summary": "x",
+        "red_flags": [{"title": "Penalty", "explanation": "You pay 300,000 won if you leave", "severity": "high"}],
+    }))
+    assert verify_numbers(out, "penalty applies") == 1
+    assert out.red_flags[0].numbers_verified is False
+
+
+def test_explain_warns_when_a_number_is_not_in_the_scan():
+    wrong = {**GOOD, "key_facts": [{"label": "Deposit", "value": "9,999,999 KRW"}]}
+    res = explain(SOURCE, DocType.RENTAL, "en", FakeLLM([json.dumps(wrong)]))
+    assert res.key_facts[0].numbers_verified is False
+    assert any("number" in w for w in res.warnings)
+
+# ---------- quote snapping ----------
+def test_locate_quote_returns_scan_text_not_the_models_version():
+    scan = "제1조 보증금\n금5,000,000원정\n계약금 금 500,000원정"
+    found = locate_quote("보증금 5,000,000원", scan)
+    assert found is not None and found in scan and "5,000,000" in found
+
+
+def test_verify_quotes_snaps_to_scan_text():
+    scan = "보증금\n금5,000,000원정 은 계약시에 지급한다"
+    out = parse_output(json.dumps({"summary": "x", "key_facts": [
+        {"label": "Deposit", "value": "5,000,000", "original_text": "보증금 5,000,000원"}]}))
+    assert verify_quotes(out, scan) == 0
+    fact = out.key_facts[0]
+    assert fact.quote_verified and fact.original_text in scan
+    assert fact.original_text != "보증금 5,000,000원"
+
+
+def test_locate_quote_none_for_invented_text():
+    assert locate_quote("전혀 없는 문장을 지어냈습니다", "보증금 금5,000,000원정") is None

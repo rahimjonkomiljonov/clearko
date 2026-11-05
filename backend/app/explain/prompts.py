@@ -44,8 +44,13 @@ Rules:
    checking with an official counter or lawyer when the issue is serious.
 7. todos: concrete next steps with deadlines found in the text, or standard legal deadlines you
    are sure about. Otherwise leave deadline null.
-8. If a text is clearly a form that has not been filled in, say so in the summary and explain what
-   each section is for instead of inventing values.
+8. Numbers: every number you write (amounts, days, percentages, dates) must appear in the document
+   text exactly as written. Never round, convert, add up or "fix" a number. If the document says
+   7700 won, write 7,700 KRW, not 8,000. Do not mention numbers that are not in the text.
+9. Each issue appears ONCE. Do not give two red flags for the same clause. Put the most
+   serious red flags first. Keep to the 3-8 most important red flags and 6-14 key facts.
+10. If the text is clearly a form that has not been filled in, say so in the summary and explain
+   what each section is for instead of inventing values.
 """
 
 CHECKLISTS: dict[DocType, str] = {
@@ -72,6 +77,8 @@ Report as key_facts when present: monthly price and what it includes (data, call
 promotional price and how long it lasts, the price after the promotion, contract length,
 cancellation or early termination penalty, device installment, fees (SIM, number portability,
 activation), visa or ID requirements, age conditions, hotspot or speed limits.
+ALWAYS make a high-severity red flag when the price goes up after a promotion, and state both
+prices (for example 22,900 -> 61,000 KRW) in the explanation.
 Check for red flags such as: price rising sharply after a promotion; long lock-in period; vague
 or unstated penalty amounts; no cancellation during an initial period; the number being cancelled
 if the visa changes; conditions on bonuses (age, bundles); data throttling; auto-renewal.

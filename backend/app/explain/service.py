@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .llm_client import LLMClient
-from .parse import ParseError, parse_output, verify_quotes
+from .parse import ParseError, parse_output, verify_numbers, verify_quotes
 from .prompts import build_prompt, build_retry_prompt
 from .schemas import DISCLAIMER, DocType, Explanation, LLMOutput
 
@@ -28,6 +28,9 @@ def explain(
     unverified = verify_quotes(output, ocr_text)
     if unverified:
         warnings.append(f"{unverified} quoted passage(s) could not be found in the scan")
+    wrong = verify_numbers(output, ocr_text)
+    if wrong:
+        warnings.append(f"{wrong} item(s) mention a number that is not in the scan. Check them.")
     if ocr_confidence is not None and ocr_confidence < 0.8:
         warnings.append("The photo was hard to read. Check numbers against the original.")
 
