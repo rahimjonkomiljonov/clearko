@@ -17,19 +17,20 @@ def resolve_device(device: str) -> str:
 
 
 class PaddleOCREngine(OCREngine):
-    name = "paddle"
+    name = "paddle"  # PaddleOCREngine(lang="korean" | "en")
 
     def __init__(
         self,
         use_orientation: bool = False,  # built-in check wrongly rotated 2 of 8 test pages
         device: str = "auto",
         det_limit_side_len: int = 1280,
+        lang: str = "korean",
     ) -> None:
         from paddleocr import PaddleOCR  # imported lazily: heavy
 
         self._ocr = PaddleOCR(
             device=resolve_device(device),
-            lang="korean",
+            lang=lang,
             use_doc_orientation_classify=use_orientation,  # fixes 90/180 degree pages
             use_doc_unwarping=False,
             use_textline_orientation=False,

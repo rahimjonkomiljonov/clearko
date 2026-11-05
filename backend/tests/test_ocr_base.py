@@ -88,3 +88,46 @@ def test_empty_result_triggers_fallback_without_crashing():
 
     result, deg = recognize_upright(Blank(), np.zeros((10, 10, 3), np.uint8))
     assert deg == 0 and result.lines == []
+
+
+# --- script routing ---
+from app.ocr.routing import ScriptRoutingEngine, hangul_ratio
+
+
+class Fixed(OCREngine):
+    name = "fixed"
+
+    def __init__(self, texts):
+        self.texts, self.calls = texts, 0
+
+    def recognize(self, image):
+        self.calls += 1
+        return OCRResult([line(t, 0, i * 10, 1, i * 10 + 5) for i, t in enumerate(self.texts)])
+
+
+def test_hangul_ratio():
+    assert hangul_ratio("보증금 5,000,000원") == 1.0
+    assert hangul_ratio("price 61,000 won") == 0.0
+    assert hangul_ratio("12,345") == 0.0
+    assert abs(hangul_ratio("계약 contract") - 0.2) < 1e-9
+
+
+def test_korean_page_stays_on_korean_engine():
+    ko, en = Fixed(["임대인과 임차인은 다음과 같이 계약을 체결한다 " * 3]), Fixed(["x"])
+    router = ScriptRoutingEngine(ko, lambda: en)
+    router.recognize(np.zeros((5, 5, 3), np.uint8))
+    assert en.calls == 0 and router.last_language == "ko"
+
+
+def test_english_page_is_rerouted_to_english_engine():
+    ko = Fixed(["Thls plon requlres a 12-month contrcct and a 61,000 won fee ok"])
+    en = Fixed(["This plan requires a 12-month contract and a 61,000 won fee"])
+    router = ScriptRoutingEngine(ko, lambda: en)
+    out = router.recognize(np.zeros((5, 5, 3), np.uint8))
+    assert "61,000" in out.full_text and router.last_language == "en"
+
+
+def test_short_text_is_not_rerouted():
+    ko, en = Fixed(["OK"]), Fixed(["x"])
+    ScriptRoutingEngine(ko, lambda: en).recognize(np.zeros((5, 5, 3), np.uint8))
+    assert en.calls == 0
