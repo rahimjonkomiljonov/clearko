@@ -95,7 +95,9 @@ def classify_error(e: Exception) -> str:
 
 def client_key(request: Request, trust_proxy: bool) -> str:
     if trust_proxy and (fwd := request.headers.get("x-forwarded-for")):
-        return fwd.split(",")[0].strip()
+        # A client can put anything at the START of this header; the LAST entry is the one the
+        # (single) trusted proxy added, so that is the only one to believe.
+        return fwd.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -115,6 +117,15 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         jobs.shutdown()
 
     app = FastAPI(title="ClearKo", docs_url=None, redoc_url=None, lifespan=lifespan)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = response.headers.get("Cache-Control", "no-store")
+        return response
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[o.strip() for o in cfg.cors_origins.split(",") if o.strip()],
@@ -140,7 +151,9 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok"}
+        # `llm` tells the privacy page whether documents stay on this server ("local") or the
+        # text is sent to a cloud model ("cloud"); never say "local" when it is not true.
+        return {"status": "ok", "llm": "local" if cfg.llm_provider == "ollama" else "cloud"}
 
     @app.post("/api/jobs", status_code=202)
     async def create_job(

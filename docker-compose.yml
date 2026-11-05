@@ -1,0 +1,51 @@
+# API + local LLM on one GPU machine. NOT BUILD-TESTED (no Docker on the author's machine).
+# The frontend is deployed separately (Vercel). See "Deploy" in the README.
+#
+#   docker compose up -d
+#   docker compose exec ollama ollama pull qwen2.5:7b
+#   docker compose exec ollama ollama pull gemma3:4b      # Russian translation
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      args:
+        WITH_UZ: "0" # "1" adds Uzbek (NLLB-200, CC-BY-NC 4.0: non-commercial only)
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_BASE_URL: http://ollama:11434
+      LLM_MODEL: qwen2.5:7b
+      LLM_TRANSLATE_MODEL: gemma3:4b
+      UZ_TRANSLATOR: nllb # use "llm" if built with WITH_UZ=0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    ports:
+      - "8000:8000"
+    volumes:
+      - paddlex:/home/app/.paddlex
+    depends_on:
+      - ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  ollama:
+  paddlex:

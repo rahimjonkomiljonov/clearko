@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResultView from "@/components/ResultView";
 import Uploader from "@/components/Uploader";
@@ -190,7 +191,12 @@ export default function Home() {
         </section>
       )}
 
-      <footer className="text-center text-xs text-muted">{t.privacy}</footer>
+      <footer className="space-y-1 text-center text-xs text-muted">
+        <p>{t.privacy}</p>
+        <Link href="/privacy" className="inline-block min-h-8 content-center underline">
+          {t.privacyLink}
+        </Link>
+      </footer>
     </main>
   );
 }

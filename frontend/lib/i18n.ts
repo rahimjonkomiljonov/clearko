@@ -38,6 +38,12 @@ export interface Texts {
   tryAgain: string;
   retryIn: (s: number) => string;
   privacy: string;
+  privacyLink: string;
+  privacyTitle: string;
+  privacyPoints: string[];
+  privacyLocal: string;
+  privacyCloud: string;
+  back: string;
   errors: Record<string, string>;
 }
 
@@ -89,6 +95,19 @@ const en: Texts = {
   retryIn: (s) => `Try again in about ${Math.ceil(s / 60)} min.`,
   privacy:
     "Your photos are read in memory and deleted when the analysis ends. Results are kept for 15 minutes at most.",
+  privacyLink: "Privacy",
+  privacyTitle: "Privacy",
+  privacyPoints: [
+    "Your photos are decoded in the server's memory, read, and dropped as soon as the analysis ends. They are never written to disk by ClearKo.",
+    "The result is kept in memory for 15 minutes at most, then deleted. \"Delete this result\" removes it at once. Closing the page also asks the server to delete it.",
+    "ClearKo has no accounts, no database and no analytics, and does not log the text of your documents. Logs hold only technical data (a short job id, error codes, timings).",
+    "Your browser remembers only your language choice. The app is installable but caches nothing about your documents.",
+    "Do not upload documents of other people without their permission. Hide your ID number if you can.",
+    "ClearKo explains documents. It is not legal advice. Check important points with the other party, a lawyer, or an official counter.",
+  ],
+  privacyLocal: "On this server the text is processed by a model that runs on the server itself. It is not sent to any other company.",
+  privacyCloud: "On this server the text of your document is sent to a cloud AI service to write the explanation. Do not upload anything you are not comfortable sharing.",
+  back: "Back",
   errors: {
     network: "Cannot reach the server. Check your connection and try again.",
     heic: "iPhone HEIC photos are not supported. Choose a JPG or PNG, or take the photo with the in-app camera.",
@@ -155,6 +174,19 @@ const ru: Texts = {
   retryIn: (s) => `Повторите примерно через ${Math.ceil(s / 60)} мин.`,
   privacy:
     "Ваши фото обрабатываются в памяти и удаляются после анализа. Результат хранится не дольше 15 минут.",
+  privacyLink: "Конфиденциальность",
+  privacyTitle: "Конфиденциальность",
+  privacyPoints: [
+    "Ваши фото расшифровываются в памяти сервера, читаются и удаляются сразу после анализа. ClearKo никогда не записывает их на диск.",
+    "Результат хранится в памяти не дольше 15 минут и затем удаляется. Кнопка «Удалить результат» стирает его сразу. При закрытии страницы сервер тоже получает просьбу удалить результат.",
+    "В ClearKo нет аккаунтов, базы данных и аналитики, текст ваших документов не записывается в журналы. В журналах только технические данные (короткий номер задания, коды ошибок, время).",
+    "Браузер запоминает только выбранный вами язык. Приложение можно установить, но оно ничего не сохраняет о ваших документах.",
+    "Не загружайте чужие документы без разрешения владельца. Закройте номер удостоверения, если можете.",
+    "ClearKo объясняет документы. Это не юридическая консультация. Важные моменты проверяйте у другой стороны, юриста или в официальной службе.",
+  ],
+  privacyLocal: "На этом сервере текст обрабатывает модель, работающая на самом сервере. Он не отправляется другим компаниям.",
+  privacyCloud: "На этом сервере текст вашего документа отправляется в облачный ИИ-сервис для составления объяснения. Не загружайте то, чем не готовы поделиться.",
+  back: "Назад",
   errors: {
     network: "Нет связи с сервером. Проверьте интернет и повторите.",
     heic: "Фото iPhone в формате HEIC не поддерживаются. Выберите JPG или PNG либо снимите фото через камеру в приложении.",
@@ -221,6 +253,19 @@ const uz: Texts = {
   retryIn: (s) => `Taxminan ${Math.ceil(s / 60)} daqiqadan keyin qayta urining.`,
   privacy:
     "Suratlaringiz xotirada o‘qiladi va tahlil tugagach o‘chiriladi. Natija ko‘pi bilan 15 daqiqa saqlanadi.",
+  privacyLink: "Maxfiylik",
+  privacyTitle: "Maxfiylik",
+  privacyPoints: [
+    "Suratlaringiz server xotirasida ochiladi, o‘qiladi va tahlil tugashi bilan o‘chiriladi. ClearKo ularni hech qachon diskka yozmaydi.",
+    "Natija xotirada ko‘pi bilan 15 daqiqa saqlanadi, so‘ng o‘chiriladi. «Natijani o‘chirish» tugmasi uni darhol o‘chiradi. Sahifani yopsangiz ham, serverdan uni o‘chirish so‘raladi.",
+    "ClearKo’da akkaunt, ma’lumotlar bazasi va analitika yo‘q, hujjatlaringiz matni jurnalga yozilmaydi. Jurnalda faqat texnik ma’lumot bor (qisqa vazifa raqami, xato kodlari, vaqt).",
+    "Brauzer faqat tanlagan tilingizni eslab qoladi. Ilovani o‘rnatish mumkin, lekin u hujjatlaringiz haqida hech narsa saqlamaydi.",
+    "Boshqa odamlarning hujjatlarini ularning ruxsatisiz yuklamang. Imkon bo‘lsa, guvohnoma raqamini yoping.",
+    "ClearKo hujjatlarni tushuntiradi. Bu yuridik maslahat emas. Muhim jihatlarni boshqa tomon, advokat yoki rasmiy idora bilan tekshiring.",
+  ],
+  privacyLocal: "Bu serverda matnni serverning o‘zida ishlaydigan model qayta ishlaydi. U boshqa kompaniyaga yuborilmaydi.",
+  privacyCloud: "Bu serverda hujjatingiz matni tushuntirish yozish uchun bulutli sun’iy intellekt xizmatiga yuboriladi. Ulashishga tayyor bo‘lmagan narsani yuklamang.",
+  back: "Orqaga",
   errors: {
     network: "Serverga ulanib bo‘lmadi. Internetni tekshirib, qayta urining.",
     heic: "iPhone HEIC suratlari qo‘llab-quvvatlanmaydi. JPG yoki PNG tanlang yoki ilovadagi kamera bilan suratga oling.",

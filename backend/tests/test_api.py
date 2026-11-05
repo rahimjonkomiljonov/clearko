@@ -63,7 +63,18 @@ def wait(client, job_id, timeout=20):
 
 # ---------- happy path ----------
 def test_health():
-    assert make_client().get("/api/health").json() == {"status": "ok"}
+    assert make_client().get("/api/health").json() == {"status": "ok", "llm": "local"}
+
+
+def test_health_says_cloud_when_a_cloud_model_is_configured():
+    assert make_client(llm_provider="gemini").get("/api/health").json()["llm"] == "cloud"
+
+
+def test_responses_carry_security_headers_and_are_not_cached():
+    r = make_client().get("/api/health")
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["cache-control"] == "no-store"
+    assert r.headers["referrer-policy"] == "no-referrer"
 
 
 def test_upload_then_poll_gives_the_explanation():
@@ -192,6 +203,27 @@ def test_full_queue_returns_503():
         assert r.status_code == 503 and r.json()["detail"]["code"] == "busy"
     finally:
         release.set()
+
+
+def test_forged_forwarded_for_does_not_dodge_the_rate_limit_behind_a_proxy():
+    c = make_client(rate_per_hour=1, trust_proxy=True)
+
+    def send(forged):
+        files = [("files", ("p.png", png(), "image/png"))]
+        headers = {"x-forwarded-for": f"{forged}, 203.0.113.9"}  # last entry = added by the proxy
+        return c.post("/api/jobs", files=files, data={"lang": "en", "doc_type": "rental"}, headers=headers)
+
+    assert send("1.1.1.1").status_code == 202
+    assert send("2.2.2.2").status_code == 429  # same real client, different forged prefix
+
+
+def test_without_trust_proxy_the_header_is_ignored():
+    c = make_client(rate_per_hour=1, trust_proxy=False)
+    h = {"x-forwarded-for": "9.9.9.9"}
+    files = lambda: [("files", ("p.png", png(), "image/png"))]
+    assert c.post("/api/jobs", files=files(), headers=h, data={"lang": "en"}).status_code == 202
+    h = {"x-forwarded-for": "8.8.8.8"}
+    assert c.post("/api/jobs", files=files(), headers=h, data={"lang": "en"}).status_code == 429
 
 
 # ---------- units ----------

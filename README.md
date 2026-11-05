@@ -6,7 +6,7 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
-Status: **Milestones 1 (pipeline CLI), 2 (API), 3 (frontend) and 4 (evaluation) done.** Next: Milestone 5 (polish and deploy). See `clearko-brief.md` for the full plan.
+Status: **Milestones 1-4 done; Milestone 5 (polish and deploy) prepared but not deployed.** Next: Milestone 6 (docs). See `clearko-brief.md` for the full plan.
 
 ## Pipeline
 
@@ -133,6 +133,43 @@ the original Korean quote), and delete it with one tap. Installable as a PWA; th
 refused with a hint (iPhone Safari usually converts to JPG when you pick from the gallery).
 The Russian and Uzbek interface texts in `frontend/lib/i18n.ts` were written by hand and need a
 native speaker's review.
+
+## Deploy
+
+**What cannot be free:** the backend needs a GPU (OCR on CPU takes 6-15 minutes per 8 pages) and a
+local LLM, so it does not fit on Vercel or a small free VM. The frontend does. Pick one backend plan:
+
+| Plan | Cost | Good for |
+|---|---|---|
+| **A. Your own GPU PC + a tunnel** (what this project was built on) | free | a portfolio demo you switch on when you show it |
+| **B. Rented GPU server + `docker compose`** | paid (a GPU VM) | an always-on demo |
+| **C. Cloud LLM (`LLM_PROVIDER=gemini`) with a GPU for OCR** | free tier or paid | no local LLM; **document text goes to Google** (the privacy page says so automatically) |
+
+**Backend** (plan A): run the API as in "Run the API", then expose it, e.g. with a Cloudflare quick tunnel:
+
+```bash
+cloudflared tunnel --url http://localhost:8000          # prints https://<random>.trycloudflare.com
+# backend .env:  CORS_ORIGINS=https://<your-vercel-app>.vercel.app   TRUST_PROXY=true
+```
+
+`TRUST_PROXY=true` is only safe with exactly **one** proxy in front: the rate limiter then trusts the
+*last* `X-Forwarded-For` entry (the one the proxy added), never the first (a client can forge it).
+A free-tier Gemini key is subject to Google's terms: content may be used to improve their products,
+so use it for the synthetic samples only, not for real documents.
+
+**Backend in containers** (plans B and C): `backend/Dockerfile` and `docker-compose.yml`
+(API + Ollama, both reserving the GPU; `WITH_UZ=1` adds the non-commercial Uzbek translator).
+**These files have not been built or run**: the author's machine has no Docker. Treat the first
+`docker compose up` as a test and report what breaks.
+
+**Frontend** (Vercel): import the repo, set *Root Directory* to `frontend`, and add the environment
+variable `NEXT_PUBLIC_API_URL=https://<your backend URL>`. The production build sends a strict
+Content-Security-Policy (the page may only talk to itself and that API), `X-Frame-Options: DENY`,
+`nosniff`, `Referrer-Policy: no-referrer`. The API sends `no-store` on every response. Changing the
+API URL needs a rebuild because it is baked into the page (and into the CSP).
+
+**Not done:** nothing is deployed yet. A deployment needs your Vercel account and a decision on the
+backend plan, which are yours to make.
 
 ## Tests
 
