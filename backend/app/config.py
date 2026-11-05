@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     llm_base_url: str = ""
 
     ocr_engine: str = "paddle"
+    ocr_device: str = "auto"  # auto | cpu | gpu:0
 
     blur_threshold: float = 60.0
     max_image_side: int = 2400

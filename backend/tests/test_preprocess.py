@@ -2,8 +2,7 @@ import cv2
 import numpy as np
 import pytest
 
-from app.preprocess import BlurryImageError, ImageDecodeError, decode_image, preprocess
-from app.preprocess import steps
+from app.preprocess import BlurryImageError, ImageDecodeError, decode_image, preprocess, steps
 
 
 def make_text_page(width=900, height=1200, lines=14) -> np.ndarray:
@@ -82,7 +81,12 @@ def test_resize_only_shrinks():
     assert steps.resize_max_side(small, 2400) is small
 
 
-def test_full_pipeline_runs_on_clean_page():
+def test_default_pipeline_is_conservative():
     result = preprocess(make_text_page())
-    assert "contrast" in result.applied
+    assert "perspective_crop" not in result.applied and "contrast" not in result.applied
     assert result.image.ndim == 3
+
+
+def test_optional_steps_can_be_enabled():
+    result = preprocess(make_text_page(), crop=True, contrast=True)
+    assert "contrast" in result.applied

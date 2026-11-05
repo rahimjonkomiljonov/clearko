@@ -10,6 +10,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# For an NVIDIA GPU install paddlepaddle-gpu instead of paddlepaddle (see README)
 ocr = ["paddlepaddle", "paddleocr"]
 llm = ["google-genai"]
 pdf = ["pymupdf"]
