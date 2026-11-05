@@ -12,6 +12,7 @@ dependencies = [
 [project.optional-dependencies]
 ocr = ["paddlepaddle", "paddleocr"]
 llm = ["google-genai"]
+pdf = ["pymupdf"]
 dev = ["pytest", "ruff", "mypy"]
 
 [tool.setuptools.packages.find]
