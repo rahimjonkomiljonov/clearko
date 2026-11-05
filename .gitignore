@@ -19,3 +19,6 @@ frontend/.next/
 frontend/next-env.d.ts
 *.tsbuildinfo
 .playwright-mcp/
+
+# eval
+eval/data/ocr_set/

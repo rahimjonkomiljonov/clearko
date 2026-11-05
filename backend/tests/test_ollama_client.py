@@ -80,3 +80,27 @@ def test_factory_defaults_to_local_and_rejects_unknown():
     assert isinstance(get_llm_client("ollama", model="m"), OllamaClient)
     with pytest.raises(ValueError):
         get_llm_client("nope")
+
+
+def test_plain_text_mode_sends_no_format(monkeypatch):
+    sent = {}
+
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"message": {"content": "hello"}}'
+
+    def fake_urlopen(req, timeout):
+        sent.update(json.loads(req.data))
+        return Resp()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    assert OllamaClient("m", force_json=False).generate("s", [("user", "hi")]) == "hello"
+    assert "format" not in sent
+    OllamaClient("m").generate("s", [("user", "hi")])
+    assert sent["format"] == "json"

@@ -70,6 +70,21 @@ def test_no_copy_of_contract_and_work_before_permit():
     assert part_time_flags("영업은 2026년 9월 1일부터 시작하였습니다.") == []
 
 
+def test_employer_deposit_and_cost_deductions_are_flagged():
+    text = (
+        "2) 유니폼 및 파손된 물품의 비용은 근로자가 부담하며 임금에서 공제한다.\n"
+        "3) 근로자는 입사 시 보증금 30만원을 사업주에게 맡기며, 퇴사 시 사업주가 판단하여 반환한다.\n"
+    )
+    flags = {f.title: f for f in part_time_flags(text)}
+    assert flags["The employer holds a deposit from you"].severity == Severity.HIGH
+    assert "보증금" in flags["The employer holds a deposit from you"].original_text
+    assert flags["Costs are taken out of your wages"].severity == Severity.MEDIUM
+
+
+def test_a_rental_style_deposit_line_is_not_flagged_by_the_labor_rules():
+    assert part_time_flags("보증금 : 금 10,000,000원 임대인에게 지급한다") == []
+
+
 def test_weekly_hours_only_checked_on_student_forms():
     assert part_time_flags("근무시간은 주 33시간 이다") == []
 

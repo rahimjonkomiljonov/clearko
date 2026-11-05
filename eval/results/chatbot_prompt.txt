@@ -1,0 +1,34 @@
+HOW TO USE: paste everything below the line into a general chatbot (ChatGPT, Gemini, Claude...), in a fresh chat.
+Save its answer as eval/results/chatbot_parttime.md and note which chatbot and date.
+Then compare with eval/results/review/parttime_photo.md (same text, via ClearKo) using eval/planted.py:
+  does it find the 11 planted problems? how many false alarms? does it quote the Korean?
+-----------------------------------------------------------------------------------------------
+I am a foreign student in Korea. Please explain this part-time job contract in plain English
+and tell me if anything is a problem for me.
+
+표준근로계약서 (단시간근로자)
+행복분식 김민수(이하 "사업주"라 함)과(와) AZIZ KARIMOV(이하 "근로자"라 함)은 다음과 같이 근로계약
+을 체결한다.
+1. 근로개시일 : 2026년 9월 1일부터 2027년 2월 28일까지
+2. 근무장소 : 경기도 성남시 수정구 태평로 100 행복분식
+3. 업무의 내용 : 주방 보조 및 기타 사업주가 지시하는 모든 업무
+4. 소정근로시간 : 18시 00분부터 23시 00분까지 (휴게시간 : 없음)
+5. 근무일/휴일 : 매주 월, 화, 수, 목, 금요일 근무 / 주휴일 : 없음
+6. 임금
+   - 시간급 : 9,000원
+   - 상여금 : 없음   - 기타급여(제수당 등) : 없음
+   - 연장·야간근로수당 : 지급하지 않음 (포괄하여 시급에 포함됨)
+   - 임금지급일 : 매월 말일 / 지급방법 : 현금으로 직접 지급
+7. 연차유급휴가 : 해당 없음
+8. 사회보험 적용여부 : 고용보험 [ ]  산재보험 [ ]  국민연금 [ ]  건강보험 [ ]  (가입하지 않음)
+9. 근로계약서 교부 : 본 계약서는 사업주가 보관하며 근로자에게 교부하지 않는다.
+[특약사항]
+1) 근로자가 계약기간 중 퇴사하려면 1개월 전에 통보해야 하며, 통보하지 않을 경우 마지막 달 임금의 5
+0%를 공제한다.
+2) 유니폼 및 파손된 물품의 비용은 근로자가 부담하며 임금에서 공제한다.
+3) 근로자는 입사 시 보증금 30만원을 사업주에게 맡기며, 퇴사 시 사업주가 판단하여 반환한다.
+4) 근로자는 업무와 관련한 사항을 외부에 알리지 않으며, 위반 시 손해를 배상한다.
+5) 이 계약에 정함이 없는 사항은 사업주의 지시에 따른다.
+2026년 8월 25일
+(사업주) 사업체명 : 행복분식    대표자 : 김민수 (인)
+(근로자) 성명 : AZIZ KARIMOV (서명)

@@ -64,7 +64,9 @@ class OllamaClient(LLMClient):
         num_ctx: int = 12288,
         timeout_s: float = 300.0,
         max_tokens: int = 4096,  # hard cap so a looping model cannot run until the timeout
+        force_json: bool = True,  # False = free text (only the evaluation baseline needs that)
     ) -> None:
+        self._force_json = force_json
         self._model = model
         self._max_tokens = max_tokens
         self._url = base_url.rstrip("/") + "/api/chat"
@@ -81,7 +83,7 @@ class OllamaClient(LLMClient):
             "model": self._model,
             "messages": chat,
             "stream": False,
-            "format": json_schema or "json",
+            **({"format": json_schema or "json"} if (json_schema or self._force_json) else {}),
             "options": {
                 "temperature": 0.2,
                 "seed": 7,  # same input -> same output, so runs can be compared

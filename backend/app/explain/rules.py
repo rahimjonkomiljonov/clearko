@@ -20,6 +20,8 @@ _NOT_INSURED = re.compile(r"(보험|연금)[^\n]{0,40}가입(하지\s*않|안\s*
 _CASH = re.compile(r"현금")
 _BLANK = re.compile(r"\(\s*미기재\s*\)|미기재")
 _NO_OVERTIME_PAY = re.compile(r"(연장|야간|휴일)[^\n]{0,12}수당[^\n]{0,10}(지급\s*하지\s*않|없음|지급\s*안)")
+_WORKER_DEPOSIT = re.compile(r"(보증금|예치금)")
+_DEDUCT_COSTS = re.compile(r"(유니폼|파손|손해|물품|비용)[^\n]*공제")
 _NO_COPY =re.compile(r"교부\s*하지\s*않|교부\s*안\s*함|교부\s*하지\s*아니")
 _ALREADY_WORKING = re.compile(r"시작\s*하였|시작\s*했|이미\s*근무")
 
@@ -136,6 +138,21 @@ def part_time_flags(text: str) -> list[RedFlag]:
                 "requires 50% extra pay for overtime, night work (22:00 to 06:00) and holiday "
                 "work at workplaces with 5 or more employees. Saying it is 'included' in the "
                 "hourly wage is not valid unless the wage clearly covers it.",
+                line, Severity.MEDIUM))
+        if _WORKER_DEPOSIT.search(line) and re.search(r"근로자|입사|맡기", line):
+            flags.append(_flag(
+                "The employer holds a deposit from you",
+                "The employer asks you to leave a deposit and decides alone whether to return it. "
+                "Employers generally may not take money from a worker as a guarantee or penalty "
+                "(Labor Standards Act, articles 20 and 22). Do not hand over cash without a "
+                "receipt, and ask a labor office (1350) before you agree.",
+                line, Severity.HIGH))
+        if _DEDUCT_COSTS.search(line) and "근로자" in line:
+            flags.append(_flag(
+                "Costs are taken out of your wages",
+                "The contract lets the employer deduct the cost of a uniform or broken items from "
+                "your wages. Wages must generally be paid in full (Labor Standards Act, article "
+                "43), so such deductions are usually not allowed. Ask for it to be removed.",
                 line, Severity.MEDIUM))
         if _NO_COPY.search(line):
             flags.append(_flag(

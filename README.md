@@ -6,7 +6,7 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
-Status: **Milestones 1 (pipeline CLI), 2 (API) and 3 (frontend) done.** Next: Milestone 4 (evaluation). See `clearko-brief.md` for the full plan.
+Status: **Milestones 1 (pipeline CLI), 2 (API), 3 (frontend) and 4 (evaluation) done.** Next: Milestone 5 (polish and deploy). See `clearko-brief.md` for the full plan.
 
 ## Pipeline
 
@@ -184,4 +184,81 @@ the tenant) removed it. Lesson: never name the wrong answer in a prompt.
 - Nothing here has been checked by a Korean reader yet. A Korean speaker must verify the OCR and
   the explanations before release, and an Uzbek speaker the Uzbek.
 
-Evaluation set and results table: coming in Milestone 4.
+## Evaluation (Milestone 4)
+
+Everything is reproducible from `eval/` (scripts, the synthetic generator, public-form sources).
+Documents with personal data stay in git-ignored folders; only synthetic and public material is committed.
+
+```bash
+python eval/tools/make_synthetic_parttime.py     # fake part-time contract + student form (planted problems)
+python eval/tools/make_ocr_set.py                # 20 OCR samples: 5 pages x 4 photo conditions
+cd backend
+python ../eval/ocr_cer.py                        # -> eval/results/ocr_cer.md
+python ../eval/run_pipeline.py                   # -> eval/results/pipeline.md + review sheets
+```
+
+**1. OCR accuracy** (20 samples, ground truth = the PDF's own text layer; full tables in
+`eval/results/ocr_cer.md`). Plain-text pages (the contracts) are read almost perfectly, even from a
+tilted, shadowed phone photo. Table-heavy government forms score badly on CER only because a PDF
+text layer lists table cells in a different order than OCR reads them, so for those read *recall*.
+
+| Page type | CER | Character recall |
+|---|---|---|
+| Plain text (synthetic contract, student form), 8 samples | 2-5% | 98% |
+| Table-heavy forms (3 pages), 12 samples | 23-79% (reading order) | 79-90% |
+| By condition, all pages: clean / low-res / photo / shaky | 22 / 28 / 28 / 38% | 96 / 90 / 94 / 78% |
+
+Preprocessing (resize, blur check, deskew) helps only on the shaky samples (CER 41% -> 38%); on
+clean photos it changes nothing. The English re-read for Latin pages changes nothing on Korean
+documents. Both stay, but they are not where the accuracy comes from. Known limit: on a tilted
+photo of a table, line order can scramble (one synthetic photo: CER 15% with 99.8% recall).
+
+**2. Does the pipeline beat "paste it into a model"?** Same local model (`qwen2.5:7b`), same OCR
+text. The baseline is one plain prompt ("explain this and point out risks"); ClearKo is the clause
+review + rules + checks. Scored on the problems planted in the synthetic documents
+(`eval/planted.py`, keyword matching applied the same way to both, and the baseline is given its
+whole answer to match in, while ClearKo is only given its red flags).
+
+| Document | Planted | ClearKo | Baseline |
+|---|---|---|---|
+| Part-time contract, photo | 11 | **10** | 9 |
+| Part-time contract, PDF | 11 | **11** | 7 |
+| Student work form, photo | 5 | **5** | 3 |
+| Student work form, PDF | 5 | **5** | 3 |
+| **Total** | 32 | **31 (97%)** | 22 (69%) |
+
+The baseline misses exactly the things that need a rule: the legal minimum wage (it does not know
+the 2026 figure), the weekly rest day, and work that started before the permit. It also hides
+nothing, which is the point of the other columns: every ClearKo flag carries the original Korean
+quote, and all quotes in these runs matched the scan. ClearKo's one miss is the catch-all clause
+"anything not agreed follows the employer's instructions" on the photo version.
+
+**3. Blank forms** (the right answer is a warning and no flags): the Seoul and Ministry of Justice
+blank leases both gave 0 red flags and the blank-form warning. Before the blank-form check these
+printed legal notices were flagged as risks.
+
+**4. Real documents** (private, redacted): the rental contract gives 5 flags (2 high: the early
+termination penalty with the broker fee on the tenant, and eviction after noise complaints) and the
+phone-plan flyers give 4 (3 high: early termination penalty, visa change and number cancellation,
+price rise after the promotion). 26-60 s each on the RTX 4060 Ti.
+
+**What the evaluation found and fixed**
+- The PDF version of the contract missed the uniform deduction and the employer-held deposit that
+  the photo version found: model judgement varies with its input. Both are now deterministic rules
+  (Labor Standards Act articles 20, 22 and 43), so the PDF scores 11/11.
+- My first baseline run was unfair: the model client forced JSON output even for free text, which
+  made the baseline answer in Chinese, loop, and fail with HTTP 500 on long text. It now runs in plain-text mode.
+- An early OCR test used the Arabic edition of a Seoul form as "Korean" ground truth. Replaced.
+
+**Limits of this evaluation (be honest about them)**
+- 8 pipeline documents is small, and 4 of them are synthetic, written by me, so the rules were
+  written knowing what was planted. The 97% is a check that nothing regressed, not a measure of
+  performance on arbitrary contracts. Real contracts (1 rental, 1 phone) are judged only by eye.
+- **Nobody who reads Korean has checked the output yet.** The review sheets in
+  `eval/results/review/` (public and synthetic documents) and `eval/results/raw/review/`
+  (private ones, not committed) are made for that: for each flag a reviewer ticks real problem /
+  false alarm / explanation correct / severity right, and lists what was missed.
+  Once a Korean speaker fills them in, the precision (false alarms) can finally be reported.
+- No hosted-chatbot comparison yet: paste `eval/results/chatbot_prompt.txt` into ChatGPT/Gemini/Claude and
+  save the answer to compare by hand. The local-model baseline above stands in for it.
+- Uzbek and Russian output are not evaluated beyond number checks; they need native review.
