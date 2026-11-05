@@ -11,7 +11,7 @@ from .parse import ParseError, extract_json, numbers_in
 from .prompts import build_translate_prompt
 from .schemas import Explanation
 
-BATCH = 24
+BATCH = 8  # small models drop or merge items in longer lists
 
 
 class _Strings(BaseModel):

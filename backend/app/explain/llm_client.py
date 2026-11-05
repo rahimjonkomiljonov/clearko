@@ -63,8 +63,10 @@ class OllamaClient(LLMClient):
         base_url: str = "http://localhost:11434",
         num_ctx: int = 12288,
         timeout_s: float = 300.0,
+        max_tokens: int = 4096,  # hard cap so a looping model cannot run until the timeout
     ) -> None:
         self._model = model
+        self._max_tokens = max_tokens
         self._url = base_url.rstrip("/") + "/api/chat"
         self._num_ctx = num_ctx
         self._timeout = timeout_s
@@ -80,7 +82,7 @@ class OllamaClient(LLMClient):
             "messages": chat,
             "stream": False,
             "format": json_schema or "json",
-            "options": {"temperature": 0.2, "num_ctx": self._num_ctx},
+            "options": {"temperature": 0.2, "num_ctx": self._num_ctx, "num_predict": self._max_tokens},
         }
         req = urllib.request.Request(
             self._url, json.dumps(body).encode("utf-8"), {"Content-Type": "application/json"}
@@ -91,8 +93,11 @@ class OllamaClient(LLMClient):
         except urllib.error.HTTPError as e:
             hint = " (model not pulled? run: ollama pull " + self._model + ")" if e.code == 404 else ""
             raise LLMError(f"Ollama returned HTTP {e.code}{hint}") from None
-        except (urllib.error.URLError, TimeoutError, ConnectionError):
-            raise LLMError("Cannot reach Ollama at " + self._url + ". Is it running?") from None
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            reason = getattr(e, "reason", e)  # connection details only, never request content
+            raise LLMError(
+                f"Cannot reach Ollama at {self._url} ({type(reason).__name__}: {reason}). Is it running?"
+            ) from None
         except json.JSONDecodeError:
             raise LLMError("Ollama returned an unreadable response") from None
         text = (data.get("message") or {}).get("content", "")

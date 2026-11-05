@@ -116,12 +116,20 @@ def verify_quotes(output: LLMOutput, source_text: str) -> int:
     return unverified
 
 
-_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+_SEP = " ,.  "  # thousands separators vary by language: 450,000 / 450 000 / 450.000
+_NUMBER = re.compile(
+    rf"(?P<int>\d+(?:[{_SEP}]\d{{3}}(?!\d))*)(?P<dec>[.,]\d{{1,2}}(?!\d))?"
+)
 
 
 def numbers_in(text: str) -> set[str]:
-    """Numbers as digit strings without thousands separators: '5,000,000원' -> '5000000'."""
-    return {m.group().rstrip(",").replace(",", "") for m in _NUMBER.finditer(text)}
+    """Numbers as normalised digit strings: '5,000,000' / '5 000 000' -> '5000000'; '1.5' stays."""
+    out: set[str] = set()
+    for m in _NUMBER.finditer(text):
+        whole = re.sub(rf"[{_SEP}]", "", m.group("int"))
+        dec = m.group("dec")
+        out.add(whole + ("." + dec[1:] if dec else ""))
+    return out
 
 
 def verify_numbers(output: LLMOutput, source_text: str) -> int:

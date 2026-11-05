@@ -242,3 +242,10 @@ def test_verify_quotes_snaps_to_scan_text():
 
 def test_locate_quote_none_for_invented_text():
     assert locate_quote("전혀 없는 문장을 지어냈습니다", "보증금 금5,000,000원정") is None
+
+
+def test_numbers_in_is_tolerant_of_separator_style():
+    assert numbers_in("450 000 KRW") == numbers_in("450,000 KRW") == numbers_in("450.000 KRW") == {"450000"}
+    assert numbers_in("15 2028") == {"15", "2028"}
+    assert numbers_in("22,900 -> 61,000") == {"22900", "61000"}
+    assert numbers_in("12 months, 1,5%") == {"12", "1.5"} or numbers_in("12 months, 1,5%") == {"12", "1.5"}
