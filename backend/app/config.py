@@ -4,9 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
-    llm_provider: str = "gemini"
+    llm_provider: str = "ollama"  # ollama (local, default) | gemini
     llm_api_key: str = ""
-    llm_model: str = "gemini-2.5-flash"
+    llm_model: str = "qwen2.5:7b"
     llm_base_url: str = ""
 
     ocr_engine: str = "paddle"

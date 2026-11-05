@@ -11,7 +11,7 @@ Status: **Milestone 1 (pipeline CLI) in progress.** See `clearko-brief.md` for t
 ## Pipeline
 
 ```
-image/PDF -> preprocess (OpenCV) -> OCR (PaddleOCR) -> classify -> LLM (Gemini) -> JSON
+image/PDF -> preprocess (OpenCV) -> OCR (PaddleOCR) -> classify -> LLM (Ollama, local) -> JSON
 ```
 
 - **Preprocess:** resize, blur rejection, deskew. Crop and contrast are optional (they did not help
@@ -22,7 +22,9 @@ image/PDF -> preprocess (OpenCV) -> OCR (PaddleOCR) -> classify -> LLM (Gemini) 
 - **PDFs with a text layer** skip OCR.
 - **Explain:** one prompt per document type, structured JSON out, one retry on invalid JSON.
   Every quoted Korean passage is checked against the OCR text; unverifiable quotes are flagged.
-- **Privacy:** no storage, no document text in logs (only with `--ocr-only` / `--debug`).
+- **Privacy:** no storage, no document text in logs (only with `--ocr-only` / `--debug`). The default
+  LLM runs locally through Ollama, so documents never leave your machine. A Gemini client exists as
+  an optional cloud provider (free tier content may be used by Google; not used by default).
 
 ## Setup (backend)
 
@@ -33,7 +35,8 @@ pip install -e ".[ocr,pdf,llm,dev]"
 # NVIDIA GPU (recommended, ~100x faster than CPU): replace the CPU build
 pip uninstall -y paddlepaddle
 pip install paddlepaddle-gpu==3.3.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
-cp ../.env.example ../.env     # then set LLM_API_KEY (free key: Google AI Studio)
+cp ../.env.example ../.env
+# Local LLM: install Ollama (https://ollama.com), then e.g.:  ollama pull qwen2.5:7b
 ```
 
 ## Run the CLI

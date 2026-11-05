@@ -143,7 +143,7 @@ class FakeLLM(LLMClient):
     def __init__(self, replies):
         self.replies, self.calls = list(replies), []
 
-    def generate(self, system, messages):
+    def generate(self, system, messages, json_schema=None):
         self.calls.append(messages)
         return self.replies.pop(0)
 

@@ -70,7 +70,9 @@ def main(argv: list[str] | None = None) -> int:
             log(f"scores={ {k.value: v for k, v in scores.items()} }")
             print(reading.text)
             return 0
-        llm = get_llm_client(settings.llm_provider, settings.llm_api_key, settings.llm_model)
+        llm = get_llm_client(
+            settings.llm_provider, settings.llm_api_key, settings.llm_model, settings.llm_base_url
+        )
         result, reading = analyze(
             pages, args.lang, engine, llm, doc_type=forced,
             max_side=settings.max_image_side, blur_threshold=settings.blur_threshold,

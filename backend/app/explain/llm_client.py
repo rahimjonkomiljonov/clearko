@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import urllib.error
+import urllib.request
 from abc import ABC, abstractmethod
 
 
@@ -9,8 +12,13 @@ class LLMError(RuntimeError):
 
 class LLMClient(ABC):
     @abstractmethod
-    def generate(self, system: str, messages: list[tuple[str, str]]) -> str:
-        """messages: list of (role, text) with role 'user' or 'model'. Returns the raw reply."""
+    def generate(
+        self, system: str, messages: list[tuple[str, str]], json_schema: dict | None = None
+    ) -> str:
+        """messages: list of (role, text), role 'user' or 'model'. Returns the raw reply.
+
+        json_schema, when given, asks the backend to constrain its output to that schema.
+        """
 
 
 class GeminiClient(LLMClient):
@@ -23,7 +31,9 @@ class GeminiClient(LLMClient):
         self._client = genai.Client(api_key=api_key)
         self._model = model
 
-    def generate(self, system: str, messages: list[tuple[str, str]]) -> str:
+    def generate(
+        self, system: str, messages: list[tuple[str, str]], json_schema: dict | None = None
+    ) -> str:
         from google.genai import types
 
         contents = [types.Content(role=r, parts=[types.Part(text=t)]) for r, t in messages]
@@ -44,7 +54,58 @@ class GeminiClient(LLMClient):
         return resp.text
 
 
-def get_llm_client(provider: str, api_key: str, model: str) -> LLMClient:
+class OllamaClient(LLMClient):
+    """Local model through Ollama's HTTP API. Nothing leaves the machine."""
+
+    def __init__(
+        self,
+        model: str,
+        base_url: str = "http://localhost:11434",
+        num_ctx: int = 12288,
+        timeout_s: float = 300.0,
+    ) -> None:
+        self._model = model
+        self._url = base_url.rstrip("/") + "/api/chat"
+        self._num_ctx = num_ctx
+        self._timeout = timeout_s
+
+    def generate(
+        self, system: str, messages: list[tuple[str, str]], json_schema: dict | None = None
+    ) -> str:
+        chat = [{"role": "system", "content": system}] + [
+            {"role": "assistant" if r == "model" else "user", "content": t} for r, t in messages
+        ]
+        body = {
+            "model": self._model,
+            "messages": chat,
+            "stream": False,
+            "format": json_schema or "json",
+            "options": {"temperature": 0.2, "num_ctx": self._num_ctx},
+        }
+        req = urllib.request.Request(
+            self._url, json.dumps(body).encode("utf-8"), {"Content-Type": "application/json"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            hint = " (model not pulled? run: ollama pull " + self._model + ")" if e.code == 404 else ""
+            raise LLMError(f"Ollama returned HTTP {e.code}{hint}") from None
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            raise LLMError("Cannot reach Ollama at " + self._url + ". Is it running?") from None
+        except json.JSONDecodeError:
+            raise LLMError("Ollama returned an unreadable response") from None
+        text = (data.get("message") or {}).get("content", "")
+        if not text.strip():
+            raise LLMError("Ollama returned an empty response")
+        return text
+
+
+def get_llm_client(
+    provider: str, api_key: str = "", model: str = "", base_url: str = ""
+) -> LLMClient:
+    if provider == "ollama":
+        return OllamaClient(model, base_url or "http://localhost:11434")
     if provider == "gemini":
         return GeminiClient(api_key, model)
     raise ValueError(f"Unknown LLM provider: {provider!r}")
