@@ -228,9 +228,9 @@ whole answer to match in, while ClearKo is only given its red flags).
 | **Total** | 32 | **31 (97%)** | 22 (69%) |
 
 The baseline misses exactly the things that need a rule: the legal minimum wage (it does not know
-the 2026 figure), the weekly rest day, and work that started before the permit. It also hides
-nothing, which is the point of the other columns: every ClearKo flag carries the original Korean
-quote, and all quotes in these runs matched the scan. ClearKo's one miss is the catch-all clause
+the 2026 figure), the weekly rest day, and work that started before the permit. Also, every
+ClearKo flag carries the original Korean quote, and all quotes in these runs matched the scan; the
+baseline quotes nothing. ClearKo's one miss is the catch-all clause
 "anything not agreed follows the employer's instructions" on the photo version.
 
 **3. Blank forms** (the right answer is a warning and no flags): the Seoul and Ministry of Justice
