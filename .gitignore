@@ -11,3 +11,5 @@ node_modules/
 eval/data/private/
 eval/results/raw/
 *.egg-info/
+# public government forms are downloaded, not committed (see eval/data/public/SOURCES.md)
+eval/data/public/*.pdf

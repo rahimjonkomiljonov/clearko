@@ -27,6 +27,25 @@ STUDENT_HOURS_HIGH = 30  # no student permit allows more
 STUDENT_HOURS_CHECK = 20  # the usual limit for undergraduates who meet the language requirement
 
 
+# Empty fill-in slots as they appear in the text layer of a blank form.
+_EMPTY_SLOTS = [
+    re.compile(r"(?<![0-9,])[ \t]{4,}원"),  # "보증금:            원"
+    re.compile(r"_{4,}"),  # "______"
+    re.compile(r"\([ \t]{4,}\)"),  # "(        )"
+    re.compile(r"년[ \t]{3,}월[ \t]{3,}일"),  # empty date
+    re.compile(r"\.[ \t]{3,}\.[ \t]{3,}\."),  # ".    .    ."
+]
+BLANK_FORM_MIN_SLOTS = 6
+
+
+def looks_blank(text: str) -> bool:
+    """True for an unfilled form (a template): it has many empty slots to fill in.
+
+    A photo of a blank form is not detected (OCR does not keep the wide spaces); that is fine.
+    """
+    return sum(len(p.findall(text)) for p in _EMPTY_SLOTS) >= BLANK_FORM_MIN_SLOTS
+
+
 def _flag(title: str, why: str, line: str, severity: Severity) -> RedFlag:
     return RedFlag(title=title, explanation=why, original_text=line.strip(),
                    quote_verified=True, severity=severity)

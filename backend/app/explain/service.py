@@ -7,7 +7,7 @@ from .judge import judge_clauses
 from .llm_client import LLMClient
 from .parse import ParseError, parse_output, verify_numbers, verify_quotes
 from .prompts import build_overview_prompt, build_prompt, build_retry_prompt
-from .rules import merge_flags, rule_flags
+from .rules import looks_blank, merge_flags, rule_flags
 from .schemas import DISCLAIMER, DocType, Explanation, LLMOutput, RedFlag, Severity
 from .translate import StringTranslator, translate_explanation
 
@@ -78,7 +78,16 @@ def explain(
     if unverified:
         warnings.append(f"{unverified} quoted passage(s) could not be found in the scan")
 
-    if clause_review:
+    blank = looks_blank(ocr_text)
+    if blank:
+        # A template has nothing wrong in it yet. Its printed notices are information, and the
+        # model reports them as problems, so no red-flag review is done.
+        warnings.append(
+            "This looks like a blank form that has not been filled in. Nothing to check yet: "
+            "take a photo of the filled and signed version to get red flags."
+        )
+        output.red_flags = []
+    elif clause_review:
         clauses = split_clauses(ocr_text)
         flags, unanswered = judge_clauses(
             client, doc_type, clauses, lambda n, total: stage(f"reviewing clauses {n}/{total}")
@@ -98,7 +107,7 @@ def explain(
         warnings.append(f"{wrong} item(s) mention a number that is not in the scan. Check them.")
     # Rule-based flags come after the number check: they quote the legal minimum wage, which is
     # (correctly) not in the scan.
-    rules = rule_flags(doc_type, ocr_text)
+    rules = [] if blank else rule_flags(doc_type, ocr_text)
     if rules:
         output.red_flags = _select_flags(merge_flags(rules, output.red_flags))
     if ocr_confidence is not None and ocr_confidence < 0.8:

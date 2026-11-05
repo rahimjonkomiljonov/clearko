@@ -72,9 +72,7 @@ shift repairs or utilities onto the tenant; costs split by number of residents (
 as septic tank (정화조) or water charges; missing 확정일자 / 전입신고 protection; the landlord's
 account name not matching the landlord; mortgages or other rights on the property in the broker
 sheet; basement or semi-basement (지하) risk such as flooding and mold.
-This is an ordinary lease from the landlord to the tenant. Standard article 제3조 only forbids the
-TENANT from subletting (전대); do not call the home a "sublet" unless the text says the landlord is
-not the owner.
+The landlord (임대인) rents the home directly to the tenant (임차인): an ordinary lease (월세 or 전세).
 Todos to consider: 전입신고 and 확정일자 (get the fixed date stamp) as soon as moving in,
 rental report (임대차 신고) within 30 days if the deposit is over 60,000,000 KRW or the monthly
 rent over 300,000 KRW, check the registry (등기부등본) before paying, keep payment receipts.

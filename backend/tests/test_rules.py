@@ -87,3 +87,20 @@ def test_merge_drops_model_flags_about_the_same_line():
     merged = merge_flags(rule, [same, other])
     assert "Other" in titles(merged) and "Wage" not in titles(merged)
     assert merged[: len(rule)] == rule
+
+
+# ---------- blank forms ----------
+BLANK = """보증금:                원, 차임: 월              원
+계약 기간:    .    .    . ~     .    .    .
+임대인 (        ) 임차인 (        )
+2026 년     월     일
+성명 ________ 주소 ________
+"""
+
+
+def test_blank_form_is_detected_and_filled_contract_is_not():
+    from app.explain.rules import looks_blank
+
+    assert looks_blank(BLANK)
+    assert not looks_blank(CONTRACT)
+    assert not looks_blank("보증금 5,000,000원 월세 450,000원 계약기간 2026.06.15 ~ 2028.06.15")
