@@ -6,7 +6,7 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
-Status: **Milestone 1 (pipeline CLI) done, waiting for review.** See `clearko-brief.md` for the full plan.
+Status: **Milestones 1 (pipeline CLI) and 2 (API) done.** Next: Milestone 3 (frontend). See `clearko-brief.md` for the full plan.
 
 ## Pipeline
 
@@ -76,6 +76,45 @@ python -m app.cli contract.pdf --ocr-only        # OCR + detected type only, no 
 ```
 
 Exit codes: 0 ok, 2 bad input, 3 unusable document (blurry / no text / unsupported type), 4 LLM failure.
+
+## Run the API
+
+```bash
+cd backend
+pip install -e ".[api]"
+python -m uvicorn app.api.main:app --port 8000
+```
+
+An analysis takes 45-100 s, too long for one request on a phone, so the API works with **jobs**:
+
+| Call | What it does |
+|---|---|
+| `POST /api/jobs` (multipart: `files` = 1+ JPG/PNG/WebP/PDF, `lang` = `uz`/`ru`/`en`, optional `doc_type`) | Validates, returns `202 {"job_id", "status"}` at once |
+| `GET /api/jobs/{id}` | `{status: queued/running/done/failed, stage, result, error}`; `stage` is e.g. `summarizing`, `reviewing clauses 2/6`, `translating 3/5` |
+| `DELETE /api/jobs/{id}` | Deletes the result now |
+| `GET /api/health` | `{"status": "ok"}` |
+
+```bash
+curl -F "files=@page1.jpg" -F "files=@page2.jpg" -F lang=uz http://localhost:8000/api/jobs
+curl http://localhost:8000/api/jobs/<job_id>
+```
+
+- **Errors** are `{"detail": {"code", "message"}}` with the message in the user's language
+  (`uz`/`ru`/`en`; the Russian and Uzbek texts in `app/messages.py` were written by hand and need a
+  native speaker's review). Codes: `bad_lang`, `no_files`, `bad_file`, `heic` (iPhone HEIC photos
+  are not supported yet), `too_large` (413), `too_many`, `rate_limited` / `busy` (429, with
+  `Retry-After`), `busy` (503, queue full), `not_found` (404). A job that fails reports
+  `blurry`, `no_text`, `unsupported`, `explain_failed` or `internal`.
+- **Rate limits** (in memory, per client): 10 analyses per hour and 30 per day, plus 500 per day
+  for everybody, to protect LLM cost. Behind a reverse proxy set `TRUST_PROXY=true` so the real
+  client address is used. All limits are settings, see `.env.example`.
+- **One analysis at a time:** OCR and the LLM share one GPU, so jobs go through a single worker;
+  at most 4 wait in the queue.
+- **Privacy:** uploaded pages are decoded in memory and dropped as soon as the analysis ends;
+  results are kept in memory for 15 minutes and then deleted (or earlier with `DELETE`). ClearKo
+  writes no document to disk and logs no document text (job logs hold ids, error codes and
+  timings only). Starlette may spool a large upload to a temp file for the length of one request.
+- File type is checked from the first bytes, not from the name or `Content-Type`.
 
 ## Tests
 

@@ -65,20 +65,32 @@ def load_pages(paths: list[Path]) -> list[Page]:
 
 
 def _load_pdf(path: Path) -> list[Page]:
+    return _pdf_pages(path.name, path)
+
+
+def pages_from_bytes(name: str, data: bytes) -> list[Page]:
+    """One uploaded file (image or PDF) -> pages. Raises ImageDecodeError for unreadable images."""
+    if data[:5] == b"%PDF-":
+        return _pdf_pages(name, data)
+    return [Page(name, image=decode_image(data))]
+
+
+def _pdf_pages(name: str, source: Path | bytes) -> list[Page]:
     import pymupdf
 
+    doc = pymupdf.open(source) if isinstance(source, Path) else pymupdf.open(stream=source, filetype="pdf")
     out: list[Page] = []
-    with pymupdf.open(path) as doc:
+    with doc:
         for i, page in enumerate(doc, 1):
             text = page.get_text().strip()
-            name = f"{path.name}#{i}"
+            page_name = f"{name}#{i}"
             if len(text) >= MIN_TEXT_LAYER_CHARS:
-                out.append(Page(name, text=text))
+                out.append(Page(page_name, text=text))
             else:
                 pix = page.get_pixmap(dpi=200)
                 img = np.frombuffer(pix.samples, np.uint8).reshape(pix.height, pix.width, pix.n)
                 bgr = img[:, :, [2, 1, 0]] if pix.n == 3 else img[:, :, 0]
-                out.append(Page(name, image=np.ascontiguousarray(bgr)))
+                out.append(Page(page_name, image=np.ascontiguousarray(bgr)))
     return out
 
 
@@ -131,7 +143,9 @@ def analyze(
     translator: LLMClient | StringTranslator | None = None,
     on_stage: Callable[[str], None] | None = None,
 ) -> tuple[Explanation, Reading]:
-    reading = read_pages(pages, engine, max_side=max_side, blur_threshold=blur_threshold)
+    reading = read_pages(
+        pages, engine, max_side=max_side, blur_threshold=blur_threshold, on_stage=on_stage
+    )
     if len(reading.text.replace("-", "").split()) < 5:
         raise NoTextFound("Almost no text was found in the image")
     detected, _ = classify(reading.text)

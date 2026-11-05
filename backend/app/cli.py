@@ -16,15 +16,10 @@ from .explain import DocType, LLMError, classify, get_llm_client
 from .explain.nllb import NLLBUnavailable
 from .explain.parse import ParseError
 from .explain.translators import get_translator
+from .messages import message
 from .ocr import get_engine
 from .pipeline import NoTextFound, UnsupportedDocument, analyze, load_pages, read_pages
 from .preprocess import BlurryImageError, ImageDecodeError
-
-MESSAGES = {  # user-facing messages for the failure cases in the brief
-    "blurry": "The photo is too blurry. Hold the phone steady, use good light and retake it.",
-    "no_text": "No text was found. Make sure the whole page is in the photo and try again.",
-    "unsupported": "This does not look like a rental, phone plan or part-time job document.",
-}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -82,13 +77,13 @@ def main(argv: list[str] | None = None) -> int:
             translator=translator, on_stage=log,
         )
     except BlurryImageError:
-        log(MESSAGES["blurry"])
+        log(message("blurry"))
         return 3
     except NoTextFound:
-        log(MESSAGES["no_text"])
+        log(message("no_text"))
         return 3
     except UnsupportedDocument:
-        log(MESSAGES["unsupported"])
+        log(message("unsupported"))
         return 3
     except (LLMError, ParseError, NLLBUnavailable) as e:
         log(f"Explanation failed: {e}")
