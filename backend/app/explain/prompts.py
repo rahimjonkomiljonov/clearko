@@ -12,8 +12,11 @@ LANGUAGE_NAMES = {
     "en": "English (simple everyday words, B1 level)",
 }
 
-# Facts the prompts rely on. VERIFY these against official sources before each release.
-MIN_WAGE_2026_KRW = 10_320  # Korean statutory minimum hourly wage for 2026 (verify)
+# Facts the prompts and rules rely on. Update every year (the rate is announced in August).
+# Verified 2026-11-06: 2026 = notice 2025-47 of the Ministry of Employment and Labor,
+# 2027 = decided 14 Jul 2026, notified 5 Aug 2026 (moel.go.kr).
+MIN_WAGE_KRW = {2026: 10_320, 2027: 10_700}  # statutory minimum hourly wage by year
+MIN_WAGE_2026_KRW = MIN_WAGE_KRW[2026]
 
 JSON_SHAPE = """\
 Return ONLY a JSON object, no other text, in exactly this shape:
@@ -99,8 +102,8 @@ Report as key_facts when present: employer and workplace, start and end date, du
 days and hours, break time, weekly rest day (주휴일), hourly wage, pay day and payment method,
 bonuses and allowances, overtime premium, social insurance, whether a copy of the contract is
 given to the worker.
-Check for red flags such as: hourly wage below the legal minimum ({MIN_WAGE_2026_KRW:,} KRW per hour in
-2026; mention it as a general reference and recommend checking); no weekly holiday pay for
+Check for red flags such as: hourly wage below the legal minimum ({MIN_WAGE_KRW[2026]:,} KRW per hour
+in 2026, {MIN_WAGE_KRW[2027]:,} KRW from 1 January 2027); no weekly holiday pay for
 workers over 15 hours a week; missing overtime premium (50% extra); cash payment with no record;
 deductions or deposits taken from pay; unclear duties; penalties for quitting; work hours above
 what the student visa permits.
@@ -158,6 +161,10 @@ Calibration rules:
 - Information notices that explain tenant/worker rights (안내문, 임대차 3법, 확인서 notes) and
   the broker's property-description sheet (중개대상물 확인·설명서) are information, not
   risks: "none".
+- Text that only EXPLAINS rules on a form (hour limits, penalties for illegal work, how to apply,
+  what the school or office does) is information: "none". A concern needs a concrete problem in
+  THIS document: a wrong or low amount, too many hours, a missing item, a cost put on the user.
+  An empty (blank) form has no such problem.
 - Hand-written special terms that put costs or duties on the user (broker fee, cleaning fees,
   repairs, utilities), restrict visitors, or allow eviction are "medium" or "high".
 """

@@ -7,6 +7,7 @@ from .judge import judge_clauses
 from .llm_client import LLMClient
 from .parse import ParseError, parse_output, verify_numbers, verify_quotes
 from .prompts import build_overview_prompt, build_prompt, build_retry_prompt
+from .rules import merge_flags, rule_flags
 from .schemas import DISCLAIMER, DocType, Explanation, LLMOutput, RedFlag, Severity
 from .translate import StringTranslator, translate_explanation
 
@@ -25,6 +26,18 @@ def _overview(client: LLMClient, system: str, user: str) -> LLMOutput:
     except ParseError as first_error:
         messages += [("model", raw), ("user", build_retry_prompt(str(first_error)))]
         return parse_output(client.generate(system, messages, schema))  # second failure propagates
+
+
+def _dedupe(flags: list[RedFlag]) -> list[RedFlag]:
+    """Drop repeats: the same notice can appear twice (e.g. Korean and English versions)."""
+    seen: set[str] = set()
+    unique = []
+    for f in flags:
+        key = f"{f.title.strip().lower()}|{f.explanation.strip()[:80].lower()}"
+        if key not in seen:
+            seen.add(key)
+            unique.append(f)
+    return unique
 
 
 def _select_flags(flags: list[RedFlag]) -> list[RedFlag]:
@@ -70,7 +83,7 @@ def explain(
         flags, unanswered = judge_clauses(
             client, doc_type, clauses, lambda n, total: stage(f"reviewing clauses {n}/{total}")
         )
-        output.red_flags = _select_flags(flags)
+        output.red_flags = _select_flags(_dedupe(flags))
         skipped = sum(c.kind == ARTICLE for c in clauses)
         if skipped:
             warnings.append(
@@ -83,6 +96,11 @@ def explain(
     wrong = verify_numbers(output, ocr_text)
     if wrong:
         warnings.append(f"{wrong} item(s) mention a number that is not in the scan. Check them.")
+    # Rule-based flags come after the number check: they quote the legal minimum wage, which is
+    # (correctly) not in the scan.
+    rules = rule_flags(doc_type, ocr_text)
+    if rules:
+        output.red_flags = _select_flags(merge_flags(rules, output.red_flags))
     if ocr_confidence is not None and ocr_confidence < 0.8:
         warnings.append("The photo was hard to read. Check numbers against the original.")
 

@@ -6,7 +6,7 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
-Status: **Milestone 1 (pipeline CLI) in progress.** See `clearko-brief.md` for the full plan.
+Status: **Milestone 1 (pipeline CLI) done, waiting for review.** See `clearko-brief.md` for the full plan.
 
 ## Pipeline
 
@@ -20,8 +20,15 @@ image/PDF -> preprocess (OpenCV) -> OCR (PaddleOCR) -> classify -> LLM (Ollama, 
   script are re-read with an English model (the Korean model garbles digits: `61,000` -> `6l,ooo`).
   Rotated pages are retried at 90/180/270 degrees when confidence is low.
 - **PDFs with a text layer** skip OCR.
-- **Explain:** one prompt per document type, structured JSON out, one retry on invalid JSON.
-  Every quoted Korean passage is checked against the OCR text; unverifiable quotes are flagged.
+- **Explain:** an overview call (summary, key facts, to-dos), then a **clause-by-clause review**:
+  the text is split into clauses and the model judges every added clause by id, so nothing is
+  skipped. Printed articles of the standard government form (제N조) are *not* reviewed: the small
+  local model explained them wrongly, and a wrong explanation is worse than none. The quote shown
+  for a flag is the scan's own text. Numbers in the output are checked against the scan.
+- **Rules:** objective checks that need no model, for part-time documents: wage below the legal
+  minimum (10,320 KRW in 2026, 10,700 KRW from 1 Jan 2027), no weekly rest day, no insurance, cash
+  pay, no copy of the contract, no overtime pay, student hours above the limit, empty required
+  fields, work started before the permit. Update the minimum wage every August (`prompts.py`).
 - **Privacy:** no storage, no document text in logs (only with `--ocr-only` / `--debug`). The default
   LLM runs locally through Ollama, so documents never leave your machine. A Gemini client exists as
   an optional cloud provider (free tier content may be used by Google; not used by default).
@@ -76,11 +83,32 @@ Exit codes: 0 ok, 2 bad input, 3 unusable document (blurry / no text / unsupport
 cd backend && python -m pytest -q
 ```
 
-## Measured so far (first rental sample, 8 phone-style pages, RTX 4060 Ti)
+## Measured so far (RTX 4060 Ti 8 GB, Ryzen 5, English output, `qwen2.5:7b`)
 
 | Setup | All 8 pages |
 |---|---|
 | PaddleOCR on CPU (Ryzen 5) | ~6-15 min |
 | PaddleOCR on GPU | ~3 s |
+
+| Sample | Pages | OCR | Explanation | What it found |
+|---|---|---|---|---|
+| Rental contract (real, redacted) | 8 | 3.7 s | ~70 s (en), ~100 s (uz, includes starting NLLB) | broker fee on tenant HIGH, eviction on noise complaints HIGH, repairs, sewer, cleaning, 1/N water fee MEDIUM |
+| Phone plan flyers (real, English) | 2 | 2.4 s | 25 s | price rise 22,900 -> 61,000 KRW HIGH, visa-change cancellation HIGH, 12-month lock, 95-day cancel ban |
+| Part-time contract (synthetic photo) | 1 | 0.6 s | 44 s | 11 planted problems: 10-11 found (wage, rest day, insurance, cash, no copy, overtime, 50% pay cut, deductions, deposit, NDA) |
+| Student work confirmation (synthetic photo) | 1 | 0.5 s | 19 s | 33 h/week, wage, started before permit, empty school/permit fields, cash: all found |
+
+Synthetic documents are made by `eval/tools/make_synthetic_parttime.py` (fake names; the planted
+problems are listed in `eval/data/synthetic/*_expected.md`).
+
+**Known weaknesses** (to be measured properly in Milestone 4):
+- The small local model sometimes gets the *story* wrong: it called the basement rental a
+  "sublet", and its explanation of the broker-fee clause is garbled. The quoted Korean and the
+  numbers are right; the English around them is not always.
+- **Blank forms are over-flagged**: the printed explanation of penalties on an empty student work
+  form is reported as a problem (2 HIGH flags on a blank form).
+- Severity from the model varies between runs for the same clause. Keyword floors fix the
+  broker-fee, eviction and penalty clauses only.
+- Nothing here has been checked by a Korean reader yet. A Korean speaker must verify the OCR and
+  the explanations before release, and an Uzbek speaker the Uzbek.
 
 Evaluation set and results table: coming in Milestone 4.
