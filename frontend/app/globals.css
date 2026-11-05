@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f6f2;
+  --card: #ffffff;
+  --ink: #1d2433;
+  --muted: #5d6677;
+  --line: #e2e0d8;
+  --brand: #1f4fd8;
+  --brand-ink: #ffffff;
+  --high: #b42318;
+  --high-bg: #fdecea;
+  --medium: #8a5a00;
+  --medium-bg: #fff4d6;
+  --low: #2f5d3a;
+  --low-bg: #e6f3e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151c;
+    --card: #1b202b;
+    --ink: #eceff5;
+    --muted: #a3acbd;
+    --line: #2b3342;
+    --brand: #7aa2ff;
+    --brand-ink: #0b1020;
+    --high: #ff8a80;
+    --high-bg: #3a1a1a;
+    --medium: #ffd27a;
+    --medium-bg: #3a2f14;
+    --low: #8fd19e;
+    --low-bg: #16301d;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans KR", sans-serif;
+  line-height: 1.5;
+}
+
+/* big, easy tap targets on a phone */
+button,
+label.btn {
+  min-height: 48px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}

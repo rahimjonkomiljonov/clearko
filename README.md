@@ -6,7 +6,7 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
-Status: **Milestones 1 (pipeline CLI) and 2 (API) done.** Next: Milestone 3 (frontend). See `clearko-brief.md` for the full plan.
+Status: **Milestones 1 (pipeline CLI), 2 (API) and 3 (frontend) done.** Next: Milestone 4 (evaluation). See `clearko-brief.md` for the full plan.
 
 ## Pipeline
 
@@ -115,6 +115,24 @@ curl http://localhost:8000/api/jobs/<job_id>
   writes no document to disk and logs no document text (job logs hold ids, error codes and
   timings only). Starlette may spool a large upload to a temp file for the length of one request.
 - File type is checked from the first bytes, not from the name or `Content-Type`.
+
+## Run the web app
+
+```bash
+cd frontend
+cp .env.example .env.local        # NEXT_PUBLIC_API_URL, default http://localhost:8000
+npm install
+npm run dev                       # http://localhost:3000   (start the API first)
+npm test                          # unit tests for stage parsing, file checks, language
+```
+
+Next.js + TypeScript + Tailwind, mobile first. Take a photo (opens the rear camera on a phone) or
+pick files, choose uz/ru/en, watch the live progress, read the result (red flags first, each with
+the original Korean quote), and delete it with one tap. Installable as a PWA; there is deliberately
+**no service worker**, so nothing about a document is cached on the device. HEIC photos are
+refused with a hint (iPhone Safari usually converts to JPG when you pick from the gallery).
+The Russian and Uzbek interface texts in `frontend/lib/i18n.ts` were written by hand and need a
+native speaker's review.
 
 ## Tests
 

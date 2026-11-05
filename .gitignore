@@ -13,3 +13,9 @@ eval/results/raw/
 *.egg-info/
 # public government forms are downloaded, not committed (see eval/data/public/SOURCES.md)
 eval/data/public/*.pdf
+
+# frontend
+frontend/.next/
+frontend/next-env.d.ts
+*.tsbuildinfo
+.playwright-mcp/
