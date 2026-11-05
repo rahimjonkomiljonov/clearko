@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Protocol
 
 from pydantic import BaseModel
 
@@ -12,6 +13,12 @@ from .prompts import build_translate_prompt
 from .schemas import Explanation
 
 BATCH = 8  # small models drop or merge items in longer lists
+
+
+class StringTranslator(Protocol):
+    """Translates English strings into `lang`. Returns None when it could not (keep English)."""
+
+    def __call__(self, lang: str, strings: list[str]) -> list[str] | None: ...
 
 
 class _Strings(BaseModel):
@@ -32,17 +39,24 @@ def _translate_batch(client: LLMClient, lang: str, strings: list[str]) -> list[s
     return None
 
 
+def llm_translator(client: LLMClient) -> StringTranslator:
+    """Translate with a chat model (works well for Russian, not for Uzbek)."""
+    return lambda lang, strings: _translate_batch(client, lang, strings)
+
+
 def translate_explanation(
     exp: Explanation,
     lang: str,
-    client: LLMClient,
+    translator: LLMClient | StringTranslator,
     on_progress: Callable[[int, int], None] | None = None,
 ) -> tuple[Explanation, int]:
     """Translate in place. Returns (explanation, number of strings left in English).
 
-    A translated string is accepted only if it contains exactly the same numbers as the English
-    one; otherwise the English text is kept (a wrong number is worse than the wrong language).
+    `translator` is a chat-model client or a StringTranslator (e.g. NLLB). A translated string is
+    accepted only if it contains exactly the same numbers as the English one; otherwise the
+    English text is kept (a wrong number is worse than the wrong language).
     """
+    translate = llm_translator(translator) if hasattr(translator, "generate") else translator
     setters: list[tuple[str, Callable[[str], None]]] = []
 
     def add(value: str, setter: Callable[[str], None]) -> None:
@@ -64,7 +78,7 @@ def translate_explanation(
     kept_english = 0
     chunks = [setters[i : i + BATCH] for i in range(0, len(setters), BATCH)]
     for n, chunk in enumerate(chunks, 1):
-        translated = _translate_batch(client, lang, [s for s, _ in chunk])
+        translated = translate(lang, [s for s, _ in chunk])  # type: ignore[operator]
         for i, (original, setter) in enumerate(chunk):
             if translated is not None and numbers_in(translated[i]) == numbers_in(original):
                 setter(translated[i])

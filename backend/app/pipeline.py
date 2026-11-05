@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from .explain import DocType, Explanation, LLMClient, classify, explain
+from .explain.translate import StringTranslator
 from .ocr import OCREngine
 from .ocr.orient import recognize_upright
 from .preprocess import decode_image, preprocess
@@ -127,7 +128,7 @@ def analyze(
     doc_type: DocType | None = None,
     max_side: int = 2400,
     blur_threshold: float = 60.0,
-    translator: LLMClient | None = None,
+    translator: LLMClient | StringTranslator | None = None,
     on_stage: Callable[[str], None] | None = None,
 ) -> tuple[Explanation, Reading]:
     reading = read_pages(pages, engine, max_side=max_side, blur_threshold=blur_threshold)

@@ -1,8 +1,27 @@
 from __future__ import annotations
 
+import sys
+
 import numpy as np
 
 from .base import OCREngine, OCRLine, OCRResult, sort_reading_order
+
+
+def _import_paddleocr():  # type: ignore[no-untyped-def]
+    """Import PaddleOCR without letting PaddleX pull in torch / transformers.
+
+    PaddleX imports them when installed (the 'uz' extra), and torch's CUDA DLLs then clash with
+    Paddle's own, so `import paddle` fails. OCR does not use them; NLLB runs in its own process.
+    """
+    blocked = [m for m in ("torch", "transformers") if m not in sys.modules]
+    for m in blocked:
+        sys.modules[m] = None  # type: ignore[assignment]  # makes `import m` raise ImportError
+    try:
+        from paddleocr import PaddleOCR
+    finally:
+        for m in blocked:
+            sys.modules.pop(m, None)
+    return PaddleOCR
 
 
 def resolve_device(device: str) -> str:
@@ -26,7 +45,7 @@ class PaddleOCREngine(OCREngine):
         det_limit_side_len: int = 1280,
         lang: str = "korean",
     ) -> None:
-        from paddleocr import PaddleOCR  # imported lazily: heavy
+        PaddleOCR = _import_paddleocr()  # imported lazily: heavy
 
         self._ocr = PaddleOCR(
             device=resolve_device(device),

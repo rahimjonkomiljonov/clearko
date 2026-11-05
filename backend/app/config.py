@@ -8,7 +8,10 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "qwen2.5:7b"
     llm_base_url: str = ""
-    llm_translate_model: str = ""  # optional: a different local model for uz/ru translation
+    llm_translate_model: str = ""  # optional: a different local model for ru (and uz fallback)
+    uz_translator: str = "nllb"  # nllb (needs the 'uz' extra, non-commercial licence) | llm
+    nllb_model: str = "facebook/nllb-200-distilled-1.3B"
+    nllb_device: str = "auto"  # auto (GPU if >3.5 GB free) | cpu | cuda
 
     ocr_engine: str = "paddle"
     ocr_device: str = "auto"  # auto | cpu | gpu:0

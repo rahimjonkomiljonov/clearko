@@ -13,7 +13,9 @@ from pathlib import Path
 
 from .config import get_settings
 from .explain import DocType, LLMError, classify, get_llm_client
+from .explain.nllb import NLLBUnavailable
 from .explain.parse import ParseError
+from .explain.translators import get_translator
 from .ocr import get_engine
 from .pipeline import NoTextFound, UnsupportedDocument, analyze, load_pages, read_pages
 from .preprocess import BlurryImageError, ImageDecodeError
@@ -73,12 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         llm = get_llm_client(
             settings.llm_provider, settings.llm_api_key, settings.llm_model, settings.llm_base_url
         )
-        translator = None
-        if settings.llm_translate_model and args.lang != "en":
-            translator = get_llm_client(
-                settings.llm_provider, settings.llm_api_key,
-                settings.llm_translate_model, settings.llm_base_url,
-            )
+        translator = get_translator(args.lang, settings, log)
         result, reading = analyze(
             pages, args.lang, engine, llm, doc_type=forced,
             max_side=settings.max_image_side, blur_threshold=settings.blur_threshold,
@@ -93,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     except UnsupportedDocument:
         log(MESSAGES["unsupported"])
         return 3
-    except (LLMError, ParseError) as e:
+    except (LLMError, ParseError, NLLBUnavailable) as e:
         log(f"Explanation failed: {e}")
         return 4
 

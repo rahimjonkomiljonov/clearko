@@ -14,6 +14,10 @@ dependencies = [
 ocr = ["paddlepaddle", "paddleocr"]
 llm = ["google-genai"]
 pdf = ["pymupdf"]
+# Uzbek translation with Meta NLLB-200 (weights are CC-BY-NC 4.0: NON-COMMERCIAL use only).
+# For an NVIDIA GPU install torch first from the CUDA index (see README).
+# torch is pinned to the build that uses the same CUDA libraries as paddlepaddle-gpu 3.3.1 (cu126).
+uz = ["torch==2.7.1", "transformers", "sentencepiece"]
 dev = ["pytest", "ruff", "mypy"]
 
 [tool.setuptools.packages.find]

@@ -37,7 +37,28 @@ pip uninstall -y paddlepaddle
 pip install paddlepaddle-gpu==3.3.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
 cp ../.env.example ../.env
 # Local LLM: install Ollama (https://ollama.com), then e.g.:  ollama pull qwen2.5:7b
+ollama pull gemma3:4b                                  # Russian translation
+
+# Uzbek translation (Meta NLLB-200, ~5 GB of downloads). torch 2.7.1 matches Paddle's CUDA libs:
+pip install "torch==2.7.1" --index-url https://download.pytorch.org/whl/cu126
+pip install -e ".[uz]"
 ```
+
+## Languages
+
+| Language | How it is produced | Status |
+|---|---|---|
+| English | `qwen2.5:7b` analysis (clause by clause) | Good, still over-flags some standard clauses |
+| Russian | English analysis, translated by `gemma3:4b` | Good in tests |
+| Uzbek | English analysis, translated sentence by sentence by NLLB-200 (1.3B) | Fluent in tests; **needs review by an Uzbek speaker** |
+
+Every translated number is checked against the English one; a string whose numbers changed stays
+in English. `qwen2.5:7b` and `gemma3:4b` cannot write usable Uzbek, which is why NLLB is used.
+
+**Licence note:** the NLLB-200 weights are CC-BY-NC 4.0, so Uzbek translation with NLLB is for
+**non-commercial use only**. Set `UZ_TRANSLATOR=llm` to avoid it (Uzbek quality is then poor).
+NLLB runs in its own worker process: torch and PaddleOCR cannot share a Windows process (both load
+different cuDNN DLLs), and this also frees the GPU memory when the run ends.
 
 ## Run the CLI
 

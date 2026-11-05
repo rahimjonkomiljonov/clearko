@@ -8,7 +8,7 @@ from .llm_client import LLMClient
 from .parse import ParseError, parse_output, verify_numbers, verify_quotes
 from .prompts import build_overview_prompt, build_prompt, build_retry_prompt
 from .schemas import DISCLAIMER, DocType, Explanation, LLMOutput, RedFlag, Severity
-from .translate import translate_explanation
+from .translate import StringTranslator, translate_explanation
 
 _ORDER = {Severity.HIGH: 0, Severity.MEDIUM: 1, Severity.LOW: 2}
 MAX_FLAGS = 10
@@ -42,7 +42,7 @@ def explain(
     client: LLMClient,
     ocr_confidence: float | None = None,
     *,
-    translator: LLMClient | None = None,
+    translator: LLMClient | StringTranslator | None = None,
     clause_review: bool = True,
     translate: bool = True,
     on_stage: Callable[[str], None] | None = None,
