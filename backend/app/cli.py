@@ -73,9 +73,16 @@ def main(argv: list[str] | None = None) -> int:
         llm = get_llm_client(
             settings.llm_provider, settings.llm_api_key, settings.llm_model, settings.llm_base_url
         )
+        translator = None
+        if settings.llm_translate_model and args.lang != "en":
+            translator = get_llm_client(
+                settings.llm_provider, settings.llm_api_key,
+                settings.llm_translate_model, settings.llm_base_url,
+            )
         result, reading = analyze(
             pages, args.lang, engine, llm, doc_type=forced,
             max_side=settings.max_image_side, blur_threshold=settings.blur_threshold,
+            translator=translator, on_stage=log,
         )
     except BlurryImageError:
         log(MESSAGES["blurry"])

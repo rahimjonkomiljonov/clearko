@@ -159,7 +159,7 @@ class FakeLLM(LLMClient):
 
 def test_explain_happy_path():
     llm = FakeLLM([json.dumps(GOOD)])
-    res = explain(SOURCE, DocType.RENTAL, "uz", llm, ocr_confidence=0.93)
+    res = explain(SOURCE, DocType.RENTAL, "uz", llm, ocr_confidence=0.93, clause_review=False, translate=False)
     assert res.disclaimer == DISCLAIMER["uz"] and res.language == "uz"
     assert res.doc_type == DocType.RENTAL
     assert all(f.quote_verified for f in res.key_facts + res.red_flags)
@@ -168,7 +168,7 @@ def test_explain_happy_path():
 
 def test_explain_retries_once_with_the_error_message():
     llm = FakeLLM(["not json at all", json.dumps(GOOD)])
-    res = explain(SOURCE, DocType.RENTAL, "en", llm)
+    res = explain(SOURCE, DocType.RENTAL, "en", llm, clause_review=False, translate=False)
     assert res.summary and len(llm.calls) == 2
     retry_messages = llm.calls[1]
     assert [r for r, _ in retry_messages] == ["user", "model", "user"]
@@ -177,12 +177,12 @@ def test_explain_retries_once_with_the_error_message():
 
 def test_explain_gives_up_after_second_bad_reply():
     with pytest.raises(ParseError):
-        explain(SOURCE, DocType.RENTAL, "en", FakeLLM(["bad", "still bad"]))
+        explain(SOURCE, DocType.RENTAL, "en", FakeLLM(["bad", "still bad"]), clause_review=False, translate=False)
 
 
 def test_explain_warns_about_hallucinated_quotes_and_low_ocr_confidence():
     bad = {**GOOD, "red_flags": [{**GOOD["red_flags"][0], "original_text": "존재하지 않는 조항 문장입니다 정말로"}]}
-    res = explain(SOURCE, DocType.RENTAL, "en", FakeLLM([json.dumps(bad)]), ocr_confidence=0.6)
+    res = explain(SOURCE, DocType.RENTAL, "en", FakeLLM([json.dumps(bad)]), ocr_confidence=0.6, clause_review=False, translate=False)
     assert len(res.warnings) == 2
     assert res.red_flags[0].quote_verified is False
 
@@ -219,7 +219,7 @@ def test_red_flag_with_invented_number_is_flagged():
 
 def test_explain_warns_when_a_number_is_not_in_the_scan():
     wrong = {**GOOD, "key_facts": [{"label": "Deposit", "value": "9,999,999 KRW"}]}
-    res = explain(SOURCE, DocType.RENTAL, "en", FakeLLM([json.dumps(wrong)]))
+    res = explain(SOURCE, DocType.RENTAL, "en", FakeLLM([json.dumps(wrong)]), clause_review=False, translate=False)
     assert res.key_facts[0].numbers_verified is False
     assert any("number" in w for w in res.warnings)
 

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "qwen2.5:7b"
     llm_base_url: str = ""
+    llm_translate_model: str = ""  # optional: a different local model for uz/ru translation
 
     ocr_engine: str = "paddle"
     ocr_device: str = "auto"  # auto | cpu | gpu:0

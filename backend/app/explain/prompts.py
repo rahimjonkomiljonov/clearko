@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from .schemas import DocType
 
 LANGUAGE_NAMES = {
@@ -123,3 +125,71 @@ def build_retry_prompt(error: str) -> str:
         "Your previous answer could not be used: "
         f"{error}\nReturn ONLY the corrected JSON object in the required shape."
     )
+
+
+# ---------- clause-by-clause review (the red-flag pass) ----------
+JUDGE_RULES = """\
+You review clauses of a Korean document for a foreign student or worker. The USER is the weaker
+party (the tenant, subscriber or worker). The text is OCR output and may contain errors.
+
+For EVERY numbered clause, judge it on its own:
+- title: at most 6 words.
+- meaning: one plain sentence saying what the clause means in practice.
+- concern: "none" for standard terms, neutral facts, headings, form labels, signature blocks or
+  unreadable OCR fragments. "low" = good to know. "medium" = one-sided, vague or likely costly;
+  worth negotiating or asking about. "high" = could cost a lot of money, the home, the job or the
+  phone number, or takes away a basic right.
+- why: the concrete consequence for the user.
+For concern "none" return ONLY {"id": N, "concern": "none"} (no title, meaning or why): this
+keeps the answer short and fast.
+Rules: write ONLY in English (never Chinese, never Korean except quotes). Do not invent facts. Every number you write must appear in the clause.
+Hand-written special terms (특약사항) are where unusual risks usually are, so read them carefully.
+Be calibrated: most clauses of a normal contract are "none". Do not call a clause "illegal".
+Calibration rules:
+- Printed articles (제N조) of a standard government form contract are normal: "none", unless they
+  contain an unusual number or condition.
+- Information notices that explain tenant/worker rights (안내문, 임대차 3법, 확인서 notes) and
+  the broker's property-description sheet (중개대상물 확인·설명서) are information, not
+  risks: "none".
+- Hand-written special terms that put costs or duties on the user (broker fee, cleaning fees,
+  repairs, utilities), restrict visitors, or allow eviction are "medium" or "high".
+"""
+
+JUDGE_SHAPE = """\
+Return ONLY a JSON object:
+{"items": [{"id": 1, "concern": "none"},
+           {"id": 2, "title": "...", "meaning": "...", "concern": "medium", "why": "..."}]}
+Include one item for EVERY clause id given, in the same order."""
+
+OVERVIEW_SHAPE = """\
+Return ONLY a JSON object, no other text, in exactly this shape:
+{
+  "summary": "3-5 plain sentences",
+  "key_facts": [{"label": "...", "value": "...", "original_text": "verbatim source text or null"}],
+  "red_flags": [],
+  "todos": [{"action": "...", "deadline": "date/period or null"}]
+}
+Leave red_flags as an empty list: they are produced by a separate review."""
+
+TRANSLATE_RULES = """\
+Translate every string in the JSON array "strings" from English into {language}.
+Keep unchanged: numbers, dates, currency codes (KRW), Korean text, product and place names.
+Use simple everyday words that a student would understand. Do not add or drop information.
+Return ONLY {{"strings": [...]}} with exactly {n} items, in the same order."""
+
+
+def build_judge_prompt(doc_type: DocType, clauses: list[tuple[int, str]]) -> tuple[str, str]:
+    system = "\n".join([JUDGE_RULES, CHECKLISTS[doc_type], JUDGE_SHAPE])
+    user = "CLAUSES:\n" + "\n".join(f"[{i}] {t}" for i, t in clauses)
+    return system, user
+
+
+def build_overview_prompt(doc_type: DocType, ocr_text: str) -> tuple[str, str]:
+    """Overview call: summary, key facts, todos. Always English; translated afterwards."""
+    system, user = build_prompt(doc_type, "en", ocr_text)
+    return system.replace(JSON_SHAPE, OVERVIEW_SHAPE), user
+
+
+def build_translate_prompt(lang: str, strings: list[str]) -> tuple[str, str]:
+    system = TRANSLATE_RULES.format(language=LANGUAGE_NAMES[lang], n=len(strings))
+    return system, json.dumps({"strings": strings}, ensure_ascii=False)

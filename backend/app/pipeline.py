@@ -127,6 +127,8 @@ def analyze(
     doc_type: DocType | None = None,
     max_side: int = 2400,
     blur_threshold: float = 60.0,
+    translator: LLMClient | None = None,
+    on_stage: Callable[[str], None] | None = None,
 ) -> tuple[Explanation, Reading]:
     reading = read_pages(pages, engine, max_side=max_side, blur_threshold=blur_threshold)
     if len(reading.text.replace("-", "").split()) < 5:
@@ -136,6 +138,8 @@ def analyze(
     if chosen == DocType.UNSUPPORTED:
         raise UnsupportedDocument("Not a supported document type")
     t0 = time.perf_counter()
-    result = explain(reading.text, chosen, lang, llm, reading.confidence)
+    result = explain(
+        reading.text, chosen, lang, llm, reading.confidence, translator=translator, on_stage=on_stage
+    )
     reading.timings["llm_s"] = time.perf_counter() - t0
     return result, reading
