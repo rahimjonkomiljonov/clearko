@@ -82,7 +82,12 @@ class OllamaClient(LLMClient):
             "messages": chat,
             "stream": False,
             "format": json_schema or "json",
-            "options": {"temperature": 0.2, "num_ctx": self._num_ctx, "num_predict": self._max_tokens},
+            "options": {
+                "temperature": 0.2,
+                "seed": 7,  # same input -> same output, so runs can be compared
+                "num_ctx": self._num_ctx,
+                "num_predict": self._max_tokens,
+            },
         }
         req = urllib.request.Request(
             self._url, json.dumps(body).encode("utf-8"), {"Content-Type": "application/json"}

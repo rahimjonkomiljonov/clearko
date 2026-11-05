@@ -65,9 +65,13 @@ fee, who pays repair costs, how the deposit is returned, broker fee (중개보�
 Check for red flags such as: tenant pays broker fee when leaving early; deposit not returned or
 returned late; cleaning or restoration charges that are open-ended; rules about visitors or
 co-residents; eviction on complaints; penalties for leaving early; special terms (특약사항) that
-shift repairs or utilities onto the tenant; missing 확정일자 / 전입신고 protection; the landlord's
+shift repairs or utilities onto the tenant; costs split by number of residents (1/N, 인원수), such
+as septic tank (정화조) or water charges; missing 확정일자 / 전입신고 protection; the landlord's
 account name not matching the landlord; mortgages or other rights on the property in the broker
 sheet; basement or semi-basement (지하) risk such as flooding and mold.
+This is an ordinary lease from the landlord to the tenant. Standard article 제3조 only forbids the
+TENANT from subletting (전대); do not call the home a "sublet" unless the text says the landlord is
+not the owner.
 Todos to consider: 전입신고 and 확정일자 (get the fixed date stamp) as soon as moving in,
 rental report (임대차 신고) within 30 days if the deposit is over 60,000,000 KRW or the monthly
 rent over 300,000 KRW, check the registry (등기부등본) before paying, keep payment receipts.
@@ -146,8 +150,11 @@ Rules: write ONLY in English (never Chinese, never Korean except quotes). Do not
 Hand-written special terms (특약사항) are where unusual risks usually are, so read them carefully.
 Be calibrated: most clauses of a normal contract are "none". Do not call a clause "illegal".
 Calibration rules:
-- Printed articles (제N조) of a standard government form contract are normal: "none", unless they
-  contain an unusual number or condition.
+- Clauses marked "(printed standard article)" belong to the standard government form that every
+  tenant/worker signs. They are normal: answer "none". Use "low" only for a fact worth
+  remembering (a deadline, an amount). NEVER explain what a clause means unless you are sure; if
+  unsure, answer "none". Do not invent what the landlord can or cannot do.
+- Clauses marked "(hand-written special term)" were added for this contract: read them closely.
 - Information notices that explain tenant/worker rights (안내문, 임대차 3법, 확인서 notes) and
   the broker's property-description sheet (중개대상물 확인·설명서) are information, not
   risks: "none".

@@ -102,9 +102,13 @@ def test_judge_flags_only_concerning_clauses_with_verbatim_quote():
     assert flags[0].original_text in " ".join(c.text for c in clauses)
 
 
+def reviewed(clauses):
+    return [c for c in clauses if c.kind != "article"]
+
+
 def test_judge_retries_unanswered_clauses_then_reports_leftovers():
     clauses = split_clauses(CONTRACT)
-    first_id = clauses[0].id
+    first_id = reviewed(clauses)[0].id
     _, unanswered = judge_clauses(RoutingLLM(drop_ids=[first_id]), DocType.RENTAL, clauses)
     assert unanswered == [first_id]  # model never answers it, even on retry
 
@@ -116,7 +120,44 @@ def test_judge_survives_garbage_replies():
 
     clauses = split_clauses(CONTRACT)
     flags, unanswered = judge_clauses(Garbage(), DocType.RENTAL, clauses)
-    assert flags == [] and len(unanswered) == len(clauses)
+    assert flags == [] and len(unanswered) == len(reviewed(clauses))
+
+
+def test_clauses_are_tagged_article_special_or_other():
+    def kind_of(prefix: str) -> str:
+        return next(c.kind for c in split_clauses(CONTRACT) if c.text.startswith(prefix))
+
+    assert kind_of("제1조") == "article" and kind_of("제5조") == "article"
+    assert kind_of("계약금은 위약") == "special" and kind_of("집을깨끗히") == "special"
+
+
+def test_without_a_special_terms_section_nothing_is_called_an_article():
+    text = "제1조 이것은 충분히 긴 조항의 내용입니다 정말로\n제2조 이것도 충분히 긴 조항의 내용입니다 정말로"
+    assert {c.kind for c in split_clauses(text)} == {"other"}
+
+
+def test_printed_articles_are_not_sent_to_the_model():
+    seen: list[str] = []
+
+    class Spy(RoutingLLM):
+        def generate(self, system, messages, json_schema=None):
+            seen.append(messages[0][1])
+            return super().generate(system, messages, json_schema)
+
+    judge_clauses(Spy(), DocType.RENTAL, split_clauses(CONTRACT))
+    sent = "\n".join(seen)
+    assert "제1조" not in sent and "계약금은 위약금" in sent
+
+
+def test_severity_floor_raises_but_never_lowers():
+    from app.explain.judge import _apply_floor
+
+    broker = "계약금은 위약금이되고 만기전이사시는 새임차인구하고 중개수수료를 임차인이 부담한다"
+    assert _apply_floor(Severity.LOW, broker) == Severity.HIGH
+    assert _apply_floor(Severity.HIGH, "집을 깨끗이 사용한다 청소비 부담한다") == Severity.HIGH
+    assert _apply_floor(Severity.LOW, "집을 깨끗이 사용한다 청소비 부담한다") == Severity.LOW
+    assert _apply_floor(Severity.LOW, "민원들어오면 퇴거시키고") == Severity.HIGH
+    assert _apply_floor(Severity.LOW, "위약금은 계약금으로 한다") == Severity.MEDIUM
 
 
 # ---------- translation ----------
@@ -171,7 +212,7 @@ def test_english_skips_translation():
 
 def test_unreviewed_clauses_produce_a_warning():
     clauses = split_clauses(CONTRACT)
-    res = explain(CONTRACT, DocType.RENTAL, "en", RoutingLLM(drop_ids=[clauses[1].id]))
+    res = explain(CONTRACT, DocType.RENTAL, "en", RoutingLLM(drop_ids=[reviewed(clauses)[0].id]))
     assert any("could not be reviewed" in w for w in res.warnings)
 
 

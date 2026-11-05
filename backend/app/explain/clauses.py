@@ -17,10 +17,17 @@ MAX_CHUNK_CHARS = 320  # long articles are split on line boundaries
 MAX_CLAUSES = 90
 
 
+ARTICLE = "article"  # printed 제N조 body of a standard form
+SPECIAL = "special"  # hand-written special terms (특약사항)
+OTHER = "other"
+_ARTICLE_START = re.compile(r"^제\s*\d+\s*조")
+
+
 @dataclass
 class Clause:
     id: int
     text: str
+    kind: str = OTHER
 
 
 def _squash(s: str) -> str:
@@ -33,13 +40,14 @@ def _useful(text: str) -> bool:
 
 
 def split_clauses(text: str) -> list[Clause]:
-    chunks: list[str] = []
+    chunks: list[tuple[str, str]] = []  # (text, kind)
     buf: list[str] = []
     in_special = False
+    in_article = False  # set by the first 제N조 line, cleared by the special terms
 
     def flush() -> None:
         if buf:
-            chunks.append(" ".join(buf).strip())
+            chunks.append((" ".join(buf).strip(), ARTICLE if in_article else OTHER))
             buf.clear()
 
     for raw in text.splitlines():
@@ -49,7 +57,7 @@ def split_clauses(text: str) -> list[Clause]:
         sq = _squash(line)
         if _SPECIAL_START in sq and len(sq) < 20:
             flush()
-            in_special = True
+            in_special, in_article = True, False
             continue
         if in_special:
             if any(m in sq for m in _SPECIAL_END):
@@ -57,15 +65,21 @@ def split_clauses(text: str) -> list[Clause]:
                 flush()
                 continue
             flush()  # one handwritten special term per line
-            chunks.append(line)
+            chunks.append((line, SPECIAL))
             continue
         if _START.match(line) or sum(len(x) for x in buf) > MAX_CHUNK_CHARS:
             flush()
+        if _ARTICLE_START.match(line):
+            in_article = True
         buf.append(line)
     flush()
 
-    useful = [c for c in chunks if _useful(c)]
-    return [Clause(i, c) for i, c in enumerate(useful[:MAX_CLAUSES], 1)]
+    useful = [(c, k) for c, k in chunks if _useful(c)]
+    if not any(k == SPECIAL for _, k in useful):
+        # No special-terms section was found, so we cannot tell where the printed form ends:
+        # do not treat anything as a standard printed article.
+        useful = [(c, OTHER) for c, _ in useful]
+    return [Clause(i, c, k) for i, (c, k) in enumerate(useful[:MAX_CLAUSES], 1)]
 
 
 def batch_clauses(clauses: list[Clause], max_chars: int = 2200, max_items: int = 10) -> list[list[Clause]]:
