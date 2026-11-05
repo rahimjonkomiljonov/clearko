@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+# never commit real documents or pipeline outputs
+eval/data/private/
+eval/results/raw/
+*.egg-info/

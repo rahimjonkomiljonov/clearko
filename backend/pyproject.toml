@@ -1,0 +1,28 @@
+[project]
+name = "clearko-backend"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "opencv-python-headless",
+  "pydantic>=2",
+  "pydantic-settings",
+]
+
+[project.optional-dependencies]
+ocr = ["paddlepaddle", "paddleocr"]
+llm = ["google-genai"]
+dev = ["pytest", "ruff", "mypy"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: needs real OCR models"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+ignore_missing_imports = true
