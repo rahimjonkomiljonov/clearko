@@ -41,6 +41,8 @@ export interface Texts {
   retryIn: (s: number) => string;
   privacy: string;
   privacyLink: string;
+  cloudNotice: string;
+  cloudConsent: string;
   privacyTitle: string;
   privacyPoints: string[];
   privacyLocal: string;
@@ -100,6 +102,8 @@ const en: Texts = {
   privacy:
     "Your photos are read in memory and deleted when the analysis ends. Results are kept for 15 minutes at most.",
   privacyLink: "Privacy",
+  cloudNotice: "Demo mode: the text of your document is sent to Google's free AI service, which may use it to improve its products. Use sample documents only, not real ones with personal data.",
+  cloudConsent: "I understand and will upload only sample documents",
   privacyTitle: "Privacy",
   privacyPoints: [
     "Your photos are decoded in the server's memory, read, and dropped as soon as the analysis ends. They are never written to disk by ClearKo.",
@@ -181,6 +185,8 @@ const ru: Texts = {
   privacy:
     "Ваши фото обрабатываются в памяти и удаляются после анализа. Результат хранится не дольше 15 минут.",
   privacyLink: "Конфиденциальность",
+  cloudNotice: "Демо-режим: текст вашего документа отправляется в бесплатный ИИ-сервис Google, который может использовать его для улучшения своих продуктов. Загружайте только образцы, а не настоящие документы с личными данными.",
+  cloudConsent: "Я понимаю и загружу только образцы документов",
   privacyTitle: "Конфиденциальность",
   privacyPoints: [
     "Ваши фото расшифровываются в памяти сервера, читаются и удаляются сразу после анализа. ClearKo никогда не записывает их на диск.",
@@ -262,6 +268,8 @@ const uz: Texts = {
   privacy:
     "Suratlaringiz xotirada o‘qiladi va tahlil tugagach o‘chiriladi. Natija ko‘pi bilan 15 daqiqa saqlanadi.",
   privacyLink: "Maxfiylik",
+  cloudNotice: "Demo rejim: hujjatingiz matni Google’ning bepul sun’iy intellekt xizmatiga yuboriladi, u uni o‘z mahsulotlarini yaxshilash uchun ishlatishi mumkin. Faqat namuna hujjatlarni yuklang, shaxsiy ma’lumotli haqiqiy hujjatlarni emas.",
+  cloudConsent: "Tushundim, faqat namuna hujjatlarni yuklayman",
   privacyTitle: "Maxfiylik",
   privacyPoints: [
     "Suratlaringiz server xotirasida ochiladi, o‘qiladi va tahlil tugashi bilan o‘chiriladi. ClearKo ularni hech qachon diskka yozmaydi.",

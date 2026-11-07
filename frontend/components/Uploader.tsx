@@ -10,6 +10,7 @@ interface Props {
   files: File[];
   docType: DocType | "auto";
   busy: boolean;
+  blocked?: boolean; // e.g. the cloud-model notice has not been accepted
   onAdd: (files: File[]) => void;
   onRemove: (index: number) => void;
   onDocType: (d: DocType | "auto") => void;
@@ -18,7 +19,7 @@ interface Props {
 
 const DOC_TYPES: (DocType | "auto")[] = ["auto", "rental", "phone_plan", "part_time"];
 
-export default function Uploader({ t, files, docType, busy, onAdd, onRemove, onDocType, onSubmit }: Props) {
+export default function Uploader({ t, files, docType, busy, blocked = false, onAdd, onRemove, onDocType, onSubmit }: Props) {
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
 
@@ -112,7 +113,7 @@ export default function Uploader({ t, files, docType, busy, onAdd, onRemove, onD
       <button
         type="button"
         onClick={onSubmit}
-        disabled={busy || files.length === 0}
+        disabled={busy || blocked || files.length === 0}
         className="w-full rounded-xl bg-brand px-4 text-base font-semibold text-brand-ink disabled:opacity-40"
       >
         {busy ? t.uploading : t.analyze}

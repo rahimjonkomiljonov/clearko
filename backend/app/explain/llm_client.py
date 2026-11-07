@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
@@ -22,14 +24,40 @@ class LLMClient(ABC):
 
 
 class GeminiClient(LLMClient):
-    def __init__(self, api_key: str, model: str) -> None:
+    """Google Gemini API. The document text LEAVES the machine; on the free tier Google may use it
+    to improve its products, so use it for sample documents only (see README, "Deploy")."""
+
+    RETRY_CODES = (429, 500, 502, 503, 504)
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        min_interval_s: float = 4.2,  # free tier: 15 requests per minute
+        retries: int = 3,
+        sleep=time.sleep,
+        clock=time.monotonic,
+    ) -> None:
         if not api_key:
             raise LLMError("LLM_API_KEY is not set. Add it to .env (see .env.example).")
         from google import genai  # imported lazily
 
-        self._genai = genai
         self._client = genai.Client(api_key=api_key)
         self._model = model
+        self._min_interval = min_interval_s
+        self._retries = retries
+        self._sleep = sleep
+        self._clock = clock
+        self._last_call = -1e9
+        self._lock = threading.Lock()
+
+    def _pace(self) -> None:
+        """Keep a minimum gap between requests so the per-minute quota is not hit."""
+        with self._lock:
+            wait = self._last_call + self._min_interval - self._clock()
+            if wait > 0:
+                self._sleep(wait)
+            self._last_call = self._clock()
 
     def generate(
         self, system: str, messages: list[tuple[str, str]], json_schema: dict | None = None
@@ -37,18 +65,28 @@ class GeminiClient(LLMClient):
         from google.genai import types
 
         contents = [types.Content(role=r, parts=[types.Part(text=t)]) for r, t in messages]
-        try:
-            resp = self._client.models.generate_content(
-                model=self._model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system,
-                    response_mime_type="application/json",
-                    temperature=0.2,
-                ),
-            )
-        except Exception as e:  # noqa: BLE001  SDK raises many types; never include request content
-            raise LLMError(f"Gemini request failed: {type(e).__name__}") from None
+        config = types.GenerateContentConfig(
+            system_instruction=system,
+            response_mime_type="application/json",
+            response_json_schema=json_schema,  # None = any JSON
+            temperature=0.2,
+            seed=7,
+            max_output_tokens=8192,
+        )
+        for attempt in range(self._retries + 1):
+            self._pace()
+            try:
+                resp = self._client.models.generate_content(
+                    model=self._model, contents=contents, config=config
+                )
+                break
+            except Exception as e:  # noqa: BLE001  SDK raises many types; never include request content
+                code = getattr(e, "code", None)
+                if code in self.RETRY_CODES and attempt < self._retries:
+                    self._sleep(15.0 * (attempt + 1))  # quota resets per minute
+                    continue
+                hint = " (rate limit: wait a minute)" if code == 429 else ""
+                raise LLMError(f"Gemini request failed: {type(e).__name__} {code or ''}{hint}") from None
         if not resp.text:
             raise LLMError("Gemini returned an empty response (possibly blocked)")
         return resp.text

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ResultView from "@/components/ResultView";
 import Uploader from "@/components/Uploader";
 import Working from "@/components/Working";
-import { ClearKoError, deleteJob, startJob, waitForJob } from "@/lib/api";
+import { API_URL, ClearKoError, deleteJob, startJob, waitForJob } from "@/lib/api";
 import { checkFile, checkSelection } from "@/lib/files";
 import { errorText, guessLang, LANG_NAMES, TEXTS } from "@/lib/i18n";
 import { LANGS, type DocType, type Explanation, type Lang } from "@/lib/types";
@@ -31,6 +31,8 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [docType, setDocType] = useState<DocType | "auto">("auto");
   const [problem, setProblem] = useState<Problem | null>(null);
+  const [cloud, setCloud] = useState(false); // the server sends document text to a cloud model
+  const [agreed, setAgreed] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const jobId = useRef<string | null>(null);
   const t = TEXTS[lang];
@@ -42,6 +44,14 @@ export default function Home() {
       saved = localStorage.getItem(LANG_KEY);
     } catch {}
     setLang(LANGS.includes(saved as Lang) ? (saved as Lang) : guessLang(navigator.languages ?? [navigator.language]));
+  }, []);
+
+  // ask the server where the text goes; assume "local" only if it says so, show the notice if it says cloud
+  useEffect(() => {
+    fetch(`${API_URL}/api/health`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((h) => setCloud(h.llm === "cloud"))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -165,12 +175,28 @@ export default function Home() {
         </div>
       )}
 
+      {cloud && (phase.kind === "pick" || phase.kind === "uploading") && (
+        <div className="space-y-3 rounded-xl border border-[var(--medium)] bg-[var(--medium-bg)] p-4">
+          <p className="text-sm font-medium">{t.cloudNotice}</p>
+          <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="h-5 w-5"
+            />
+            {t.cloudConsent}
+          </label>
+        </div>
+      )}
+
       {(phase.kind === "pick" || phase.kind === "uploading") && (
         <Uploader
           t={t}
           files={files}
           docType={docType}
           busy={phase.kind === "uploading"}
+          blocked={cloud && !agreed}
           onAdd={add}
           onRemove={(i) => setFiles(files.filter((_, j) => j !== i))}
           onDocType={setDocType}

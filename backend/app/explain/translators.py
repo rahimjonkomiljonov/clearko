@@ -18,6 +18,10 @@ def get_translator(
     """None means: translate with the main chat model."""
     if lang == "en":
         return None
+    if settings.llm_provider != "ollama":
+        # a cloud model writes Russian and Uzbek itself; the local translators (and their model
+        # names, which mean nothing to a cloud API) do not apply
+        return None
     if lang == "uz" and settings.uz_translator == "nllb":
         if nllb_available():
             key = (settings.nllb_model, settings.nllb_device)

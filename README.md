@@ -160,6 +160,27 @@ local LLM, so it does not fit on Vercel or a small free VM. The frontend does. P
 | **B. Rented GPU server + `docker compose`** | paid (a GPU VM) | an always-on demo |
 | **C. Cloud LLM (`LLM_PROVIDER=gemini`) with a GPU for OCR** | free tier or paid | no local LLM; **document text goes to Google** (the privacy page says so automatically) |
 
+### Cloud mode with Gemini (free tier)
+
+```bash
+# backend/.env  (create a key at https://aistudio.google.com; the key never goes into git)
+LLM_PROVIDER=gemini
+LLM_API_KEY=...
+LLM_MODEL=<a current Flash model from AI Studio>
+```
+
+- The LLM then needs no GPU (OCR still does). Gemini writes Russian and Uzbek itself, so Gemma and
+  NLLB are not used.
+- **Free tier means sample documents only**: Google may use the content to improve its products.
+  `/api/health` reports `"llm": "cloud"`, and the web app then shows a notice and a consent box
+  before it lets anyone upload, and the privacy page says the same.
+- The free tier allows about 15 requests per minute, so `GeminiClient` spaces calls 4.2 s apart and
+  retries rate-limit and server errors up to 3 times (15 s, 30 s, 45 s). An analysis therefore takes
+  roughly 40-90 s. Limits change often: check AI Studio for the current ones.
+- The Gemini path has only been tested with a fake SDK (8 unit tests). It has **not** been run against
+  the real service yet: that needs your key, then `python eval/run_pipeline.py` with these variables
+  set, to compare planted-problem recall and Uzbek quality with `qwen2.5:7b` before relying on it.
+
 **Backend** (plan A): run the API as in "Run the API", then expose it, e.g. with a Cloudflare quick tunnel:
 
 ```bash
