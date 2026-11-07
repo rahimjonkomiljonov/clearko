@@ -22,3 +22,6 @@ frontend/next-env.d.ts
 
 # eval
 eval/data/ocr_set/
+
+backend/build/
+build/
