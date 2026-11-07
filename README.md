@@ -252,7 +252,16 @@ sleep (a slow first request after a pause); a few advertise no sleep (a web sear
 Koyeb, Fly.io and Zeabur, from secondary sources). Check the provider's current pricing page before
 choosing, and set the host's `CORS_ORIGINS` to your Vercel URL. `backend/Dockerfile.slim` reads `$PORT`.
 
-**Not done:** nothing is deployed yet. A deployment needs your Vercel account and a decision on the
+**Deployed (plan: Vercel + this PC).** The frontend is live at https://clearko-ras-5e26.vercel.app (free Hobby
+plan). Its backend is this developer's PC, reached through a free Cloudflare quick tunnel, with Gemini as
+the model (OCR on the local GPU, so only text goes to Google). So **the demo works only while that PC is on
+and `scripts/start-demo.ps1` is running**; otherwise the page loads but shows a connection error. Limits for
+the public demo: 3 analyses per hour and 6 per day per visitor, 30 per day in total (protects the free Gemini
+quota), and the page asks visitors to upload sample documents only.
+A quick tunnel gets a new random address on every start, and the frontend has the address baked in at build
+time, so after each restart set `NEXT_PUBLIC_API_URL` in Vercel to the new address and redeploy. A stable
+address (a free ngrok static domain or a Cloudflare named tunnel with a domain) would remove that step.
+Only the first deployment of the frontend was uploaded file by file; for later changes connect a Git repository. A deployment needs your Vercel account and a decision on the
 backend plan, which are yours to make.
 
 ## Tests
