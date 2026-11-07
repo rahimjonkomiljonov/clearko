@@ -117,6 +117,18 @@ export default function ResultView({ t, result, onDelete, onNew }: Props) {
         </section>
       )}
 
+      {result.ocr_text && (
+        <details className="rounded-xl border border-line bg-card">
+          <summary className="min-h-12 cursor-pointer content-center px-4 font-semibold">{t.scanTitle}</summary>
+          <div className="space-y-2 border-t border-line p-4">
+            <p className="text-sm text-muted">{t.scanHint}</p>
+            <pre lang="ko" className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-sm">
+              {result.ocr_text}
+            </pre>
+          </div>
+        </details>
+      )}
+
       <p className="rounded-xl border border-line p-4 text-sm text-muted">{result.disclaimer}</p>
 
       <div className="grid gap-3 sm:grid-cols-2">

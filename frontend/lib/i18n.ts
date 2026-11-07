@@ -29,6 +29,8 @@ export interface Texts {
   todos: string;
   deadline: string;
   original: string;
+  scanTitle: string;
+  scanHint: string;
   severity: Record<Severity, string>;
   unverifiedNumber: string;
   warnings: string;
@@ -85,6 +87,8 @@ const en: Texts = {
   todos: "What to do",
   deadline: "By",
   original: "Original text",
+  scanTitle: "Text read from your document",
+  scanHint: "Compare this with your paper. If a word or number is wrong here, the explanation may be wrong too.",
   severity: { high: "Serious", medium: "Check", low: "Minor" },
   unverifiedNumber: "A number here could not be matched to the scan. Check it in the original.",
   warnings: "Notes",
@@ -164,6 +168,8 @@ const ru: Texts = {
   todos: "Что делать",
   deadline: "До",
   original: "Исходный текст",
+  scanTitle: "Текст, прочитанный с документа",
+  scanHint: "Сравните его с бумажным документом. Если здесь неверно слово или число, объяснение тоже может быть неверным.",
   severity: { high: "Серьёзно", medium: "Проверьте", low: "Мелочь" },
   unverifiedNumber: "Это число не удалось сверить со сканом. Проверьте его в оригинале.",
   warnings: "Примечания",
@@ -243,6 +249,8 @@ const uz: Texts = {
   todos: "Nima qilish kerak",
   deadline: "Muddat",
   original: "Asl matn",
+  scanTitle: "Hujjatdan o‘qilgan matn",
+  scanHint: "Uni qog‘oz hujjat bilan solishtiring. Bu yerda so‘z yoki raqam noto‘g‘ri bo‘lsa, tushuntirish ham noto‘g‘ri bo‘lishi mumkin.",
   severity: { high: "Jiddiy", medium: "Tekshiring", low: "Arzimas" },
   unverifiedNumber: "Bu raqamni skan bilan solishtirib bo‘lmadi. Asl nusxadan tekshiring.",
   warnings: "Izohlar",

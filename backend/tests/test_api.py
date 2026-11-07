@@ -85,6 +85,7 @@ def test_upload_then_poll_gives_the_explanation():
     assert body["status"] == "done" and body["error"] is None
     assert body["result"]["doc_type"] == "rental"
     assert body["result"]["disclaimer"]
+    assert "보증금" in body["result"]["ocr_text"]  # the scan is returned for the collapsible view
     assert any(f["severity"] == "high" for f in body["result"]["red_flags"])
 
 

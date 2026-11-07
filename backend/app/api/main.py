@@ -220,7 +220,9 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                 )
                 log.info("job done: type=%s pages=%d timings=%s", result.doc_type.value,
                          reading.pages, {k: round(v, 1) for k, v in reading.timings.items()})
-                return result.model_dump(mode="json")
+                # the scanned text goes back to the person who uploaded it, so they can check the
+                # explanation against it; like the rest of the result it lives in memory only
+                return {**result.model_dump(mode="json"), "ocr_text": reading.text}
             finally:
                 pages.clear()  # drop the uploaded images as soon as the analysis is over
 

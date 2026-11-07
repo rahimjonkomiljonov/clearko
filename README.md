@@ -6,7 +6,22 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
-Status: **Milestones 1-4 done; Milestone 5 (polish and deploy) prepared but not deployed.** Next: Milestone 6 (docs). See `clearko-brief.md` for the full plan.
+Status: **all six milestones are done except the actual deployment** (see [Deploy](#deploy)).
+Documents: [architecture diagram](docs/architecture.md) | [case study](docs/case-study.md) |
+[project brief](clearko-brief.md) | [evaluation results](eval/results/pipeline.md).
+
+**Quick start** (Windows/Linux, NVIDIA GPU recommended; details in [Setup](#setup-backend)):
+
+```bash
+ollama pull qwen2.5:7b                                   # the local model
+cd backend && pip install -e ".[ocr,pdf,llm,api]" && python -m uvicorn app.api.main:app --port 8000
+cd frontend && npm install && npm run dev                # http://localhost:3000
+```
+
+**Contents:** [Pipeline](#pipeline) | [Setup](#setup-backend) | [Languages](#languages) |
+[CLI](#run-the-cli) | [API](#run-the-api) | [Web app](#run-the-web-app) | [Deploy](#deploy) |
+[Tests](#tests) | [Measured results](#measured-so-far-rtx-4060-ti-8-gb-ryzen-5-english-output-qwen257b) |
+[Evaluation](#evaluation-milestone-4) | [Layout](#project-layout)
 
 ## Pipeline
 
@@ -299,3 +314,25 @@ price rise after the promotion). 26-60 s each on the RTX 4060 Ti.
 - No hosted-chatbot comparison yet: paste `eval/results/chatbot_prompt.txt` into ChatGPT/Gemini/Claude and
   save the answer to compare by hand. The local-model baseline above stands in for it.
 - Uzbek and Russian output are not evaluated beyond number checks; they need native review.
+
+## Project layout
+
+```
+backend/app/
+  preprocess/   OpenCV steps: resize, blur check, deskew
+  ocr/          OCREngine interface, PaddleOCR, script routing, rotation retry
+  explain/      prompts, clause splitting, judge, rules, guards, translators, LLM clients
+  api/          FastAPI routes, job queue, rate limiter
+  pipeline.py   photo(s) -> Explanation          cli.py   the same from the command line
+frontend/       Next.js app (upload, progress, result, privacy page)
+eval/           OCR error rate, pipeline-vs-baseline, synthetic and public test documents, review sheets
+docs/           architecture diagram, case study
+```
+
+## Licences and credits
+
+Code: no licence has been chosen yet (add one before publishing). PaddleOCR and Ollama models are used
+under their own terms. **Uzbek translation uses NLLB-200 (CC-BY-NC 4.0, non-commercial only) and
+EXAONE, if you try it, is also non-commercial.** The public test forms come from the Seoul
+Metropolitan Government and the Ministry of Justice (sources in `eval/data/public/SOURCES.md`) and
+are not redistributed here (the PDFs are git-ignored; the committed review sheets contain only the text our OCR read from them).

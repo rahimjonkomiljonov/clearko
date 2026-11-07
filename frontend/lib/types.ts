@@ -38,6 +38,8 @@ export interface Explanation {
   disclaimer: string;
   ocr_confidence: number | null;
   warnings: string[];
+  /** the text read from the scan, for checking the explanation against it */
+  ocr_text?: string;
 }
 
 export interface ApiError {
