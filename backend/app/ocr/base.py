@@ -33,6 +33,9 @@ class OCREngine(ABC):
     """Swappable OCR backend. Takes a BGR (or grayscale) image, returns lines in reading order."""
 
     name: str
+    # False for engines that cannot say how sure they are (a vision LLM): the pipeline then reports
+    # no OCR confidence instead of a made-up one.
+    has_confidence: bool = True
 
     @abstractmethod
     def recognize(self, image: np.ndarray) -> OCRResult: ...

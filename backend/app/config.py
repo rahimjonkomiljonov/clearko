@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     nllb_model: str = "facebook/nllb-200-distilled-1.3B"
     nllb_device: str = "auto"  # auto (GPU if >3.5 GB free) | cpu | cuda
 
-    ocr_engine: str = "paddle"
+    ocr_engine: str = "paddle"  # paddle (local; needs a GPU to be fast) | gemini (cloud, no GPU)
+    ocr_model: str = ""  # gemini OCR only: model that reads the pages; empty = llm_model
     ocr_device: str = "auto"  # auto | cpu | gpu:0
 
     blur_threshold: float = 60.0

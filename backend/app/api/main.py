@@ -33,7 +33,7 @@ from ..explain.parse import ParseError
 from ..explain.translate import StringTranslator
 from ..explain.translators import get_translator
 from ..messages import message
-from ..ocr import OCREngine, get_engine
+from ..ocr import OCREngine, engine_from_settings
 from ..pipeline import NoTextFound, Page, UnsupportedDocument, analyze, pages_from_bytes
 from ..preprocess import BlurryImageError
 from .jobs import DONE, FAILED, Job, JobManager, QueueFull
@@ -144,7 +144,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                     cfg.llm_provider, cfg.llm_api_key, cfg.llm_model, cfg.llm_base_url
                 )
                 built.append(Services(
-                    get_engine(cfg.ocr_engine, cfg.ocr_device), llm,
+                    engine_from_settings(cfg, llm), llm,
                     lambda lang: get_translator(lang, cfg),
                 ))
             return built[0]
@@ -153,7 +153,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     def health() -> dict[str, str]:
         # `llm` tells the privacy page whether documents stay on this server ("local") or the
         # text is sent to a cloud model ("cloud"); never say "local" when it is not true.
-        return {"status": "ok", "llm": "local" if cfg.llm_provider == "ollama" else "cloud"}
+        cloud = cfg.llm_provider != "ollama" or cfg.ocr_engine == "gemini"  # page images count too
+        return {"status": "ok", "llm": "cloud" if cloud else "local"}
 
     @app.post("/api/jobs", status_code=202)
     async def create_job(

@@ -70,6 +70,10 @@ def test_health_says_cloud_when_a_cloud_model_is_configured():
     assert make_client(llm_provider="gemini").get("/api/health").json()["llm"] == "cloud"
 
 
+def test_health_says_cloud_when_pages_go_to_a_cloud_ocr_even_with_a_local_llm():
+    assert make_client(ocr_engine="gemini").get("/api/health").json()["llm"] == "cloud"
+
+
 def test_responses_carry_security_headers_and_are_not_cached():
     r = make_client().get("/api/health")
     assert r.headers["x-content-type-options"] == "nosniff"

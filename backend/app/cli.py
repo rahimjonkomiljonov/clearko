@@ -17,7 +17,7 @@ from .explain.nllb import NLLBUnavailable
 from .explain.parse import ParseError
 from .explain.translators import get_translator
 from .messages import message
-from .ocr import get_engine
+from .ocr import engine_from_settings
 from .pipeline import NoTextFound, UnsupportedDocument, analyze, load_pages, read_pages
 from .preprocess import BlurryImageError, ImageDecodeError
 
@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     log(f"{len(pages)} page(s) loaded")
 
-    engine = get_engine(settings.ocr_engine, settings.ocr_device)
+    engine = engine_from_settings(settings, None)  # None: a gemini OCR engine makes its own client
     forced = DocType(args.doc_type) if args.doc_type else None
     try:
         if args.ocr_only:

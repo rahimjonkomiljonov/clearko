@@ -7,6 +7,10 @@ Configurations compared:
   ko-raw      Korean PaddleOCR model on the unprocessed image
   ko-pre      Korean model after preprocessing (resize, blur check, deskew)
   routed-pre  what ClearKo ships: preprocessing + Korean model + English re-read of Latin pages
+  gemini-pre  preprocessing + a Gemini vision model reading the page (needs LLM_API_KEY; the
+              pages are sent to Google, so only the synthetic/public sample set is ever used)
+
+    python ../eval/ocr_cer.py --engines gemini   # run one family; saved results of the other are kept
 
 Writes eval/results/ocr_cer.md and eval/results/raw/ocr_cer.json (raw is git-ignored).
 Ground truth is the PDF text layer. CER ignores whitespace; "recall" ignores character order.
@@ -14,6 +18,7 @@ Ground truth is the PDF text layer. CER ignores whitespace; "recall" ignores cha
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -25,6 +30,8 @@ sys.path.insert(0, str(ROOT.parent / "backend"))
 
 import cv2
 
+from app.config import get_settings
+from app.explain.llm_client import GeminiClient
 from app.metrics import cer, char_recall
 from app.ocr import get_engine
 from app.ocr.orient import recognize_upright
@@ -35,13 +42,27 @@ RESULTS = ROOT / "results"
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--engines", nargs="*", choices=["paddle", "gemini"], default=["paddle", "gemini"])
+    args = ap.parse_args()
     samples = sorted(SET.glob("*__*.jpg"))
     if not samples:
         sys.exit("no samples: run eval/tools/make_ocr_set.py first")
 
-    routed = get_engine("paddle", "auto")  # ScriptRoutingEngine(korean, english)
-    ko = routed._korean  # the plain Korean engine, shared so models load once
-    engines = {"ko-raw": (ko, False), "ko-pre": (ko, True), "routed-pre": (routed, True)}
+    engines: dict = {}
+    if "paddle" in args.engines:
+        routed = get_engine("paddle", "auto")  # ScriptRoutingEngine(korean, english)
+        ko = routed._korean  # the plain Korean engine, shared so models load once
+        engines.update({"ko-raw": (ko, False), "ko-pre": (ko, True), "routed-pre": (routed, True)})
+    if "gemini" in args.engines:
+        cfg = get_settings()
+        client = GeminiClient(cfg.llm_api_key, cfg.ocr_model or cfg.llm_model)
+        engines["gemini-pre"] = (get_engine("gemini", gemini=client), True)
+
+    raw_file = RESULTS / "raw" / "ocr_cer.json"
+    kept = []
+    if raw_file.exists():  # keep the results of engines that are not re-run now
+        kept = [r for r in json.loads(raw_file.read_text(encoding="utf-8")) if r["config"] not in engines]
 
     rows = []
     for path in samples:
@@ -57,7 +78,13 @@ def main() -> None:
                 rows.append(row)
                 continue
             t0 = time.perf_counter()
-            result, _ = recognize_upright(engine, work)
+            try:
+                result, _ = recognize_upright(engine, work)
+            except Exception as e:  # noqa: BLE001  a failed call is a result, not a crash
+                row.update(status=f"error_{type(e).__name__}", cer=None, recall=None, seconds=0.0)
+                rows.append(row)
+                print(f"{path.name:28} {label:11} FAILED {type(e).__name__}", flush=True)
+                continue
             row.update(
                 status="ok",
                 cer=cer(truth, result.full_text),
@@ -67,9 +94,11 @@ def main() -> None:
             rows.append(row)
             print(f"{path.name:28} {label:11} CER {row['cer']:.3f}  recall {row['recall']:.3f}", flush=True)
 
+    order = ["ko-raw", "ko-pre", "routed-pre", "gemini-pre"]
+    rows = sorted(kept + rows, key=lambda r: (order.index(r["config"]) if r["config"] in order else 9))
     RESULTS.mkdir(exist_ok=True)
     (RESULTS / "raw").mkdir(exist_ok=True)
-    (RESULTS / "raw" / "ocr_cer.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    raw_file.write_text(json.dumps(rows, indent=1), encoding="utf-8")
     (RESULTS / "ocr_cer.md").write_text(report(rows, len(samples)), encoding="utf-8")
     print("wrote", RESULTS / "ocr_cer.md")
 
@@ -110,17 +139,22 @@ def report(rows: list[dict], n_samples: int) -> str:
             out.append(f"| {c} | " + " | ".join(cells) + f" | **{cell(allr, key)}** |")
         out.append("")
 
-    out.append("## By document (routed-pre)\n")
+    shown = [c for c in ("routed-pre", "gemini-pre") if c in configs]
+    out.append("## By document\n")
     out.append("Table-heavy forms have a text layer in a different cell order than OCR reading order,")
     out.append("so their CER is mostly an ordering penalty: read their recall instead.\n")
-    out.append("| Document | Kind | CER | Recall |")
-    out.append("|---|---|---|---|")
+    out.append("| Document | Kind | " + " | ".join(f"{c} CER | {c} recall" for c in shown) + " |")
+    out.append("|---|---|" + "---|---|" * len(shown))
     for d in dict.fromkeys(r["doc"] for r in rows):
-        rs = [r for r in rows if r["doc"] == d and r["config"] == "routed-pre"]
         kind = "table form" if d in FORMS else "plain text"
-        out.append(f"| {d} | {kind} | {cell(rs, 'cer')} | {cell(rs, 'recall')} |")
-    secs = [r["seconds"] for r in rows if r["config"] == "routed-pre" and r["status"] == "ok"]
-    out.append(f"\nMean OCR time per page (routed-pre): {mean(secs):.1f} s.")
+        cells = []
+        for c in shown:
+            rs = [r for r in rows if r["doc"] == d and r["config"] == c]
+            cells += [cell(rs, "cer"), cell(rs, "recall")]
+        out.append(f"| {d} | {kind} | " + " | ".join(cells) + " |")
+    for c in shown:
+        secs = [r["seconds"] for r in rows if r["config"] == c and r["status"] == "ok"]
+        out.append(f"\nMean OCR time per page ({c}): {mean(secs):.1f} s.")
     return "\n".join(out) + "\n"
 
 

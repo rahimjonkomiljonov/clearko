@@ -1,0 +1,30 @@
+# ClearKo API, CPU only: Gemini reads the pages and writes the explanation. No GPU, no PaddlePaddle,
+# no torch, so it fits a small always-on server or a free container host.
+# NOT BUILD-TESTED (no Docker on the author's machine); the same dependency set was installed and the
+# API started in a clean virtualenv instead (see README, "Deploy").
+#
+#   docker build -f backend/Dockerfile.slim -t clearko-api-slim backend
+#   docker run -p 8000:8000 -e LLM_API_KEY=... -e CORS_ORIGINS=https://your-app.vercel.app clearko-api-slim
+#
+# Free-tier Gemini means page images and text go to Google: sample documents only (see README).
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
+    LLM_PROVIDER=gemini OCR_ENGINE=gemini LLM_MODEL=gemini-3.5-flash-lite \
+    TRUST_PROXY=true
+
+RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 app
+
+WORKDIR /app
+COPY pyproject.toml ./
+COPY app ./app
+RUN pip install ".[llm,pdf,api]"
+
+USER app
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
+    CMD python -c "import os,urllib.request as u; u.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('PORT','8000'), timeout=4)"
+# hosts such as Render or Fly tell the app which port to use in $PORT
+CMD ["sh", "-c", "python -m uvicorn app.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

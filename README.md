@@ -159,6 +159,7 @@ local LLM, so it does not fit on Vercel or a small free VM. The frontend does. P
 | **A. Your own GPU PC + a tunnel** (what this project was built on) | free | a portfolio demo you switch on when you show it |
 | **B. Rented GPU server + `docker compose`** | paid (a GPU VM) | an always-on demo |
 | **C. Cloud LLM (`LLM_PROVIDER=gemini`) with a GPU for OCR** | free tier or paid | no local LLM; **document text goes to Google** (the privacy page says so automatically) |
+| **D. Cloud LLM and cloud OCR (`OCR_ENGINE=gemini`), CPU-only container** | free tier host + free Gemini key | an always-on demo with **no GPU at all**; **page images and text go to Google**, so sample documents only |
 
 ### Cloud mode with Gemini (free tier)
 
@@ -195,6 +196,34 @@ LLM_MODEL=gemini-3.5-flash-lite      # check with eval/tools/check_gemini.py
   one-line prompt, the 2.5 models returned 404, and `gemini-3.5-flash-lite` answered in about 1.5 s.
   Availability changes often, so do not hard-code a name from a blog post.
 
+### Cloud OCR with Gemini (no GPU)
+
+`OCR_ENGINE=gemini` lets a vision model read the page instead of PaddleOCR, so the backend needs no GPU,
+no PaddlePaddle and no torch: install only `pip install ".[llm,pdf,api]"` (about 420 MB, or use
+`backend/Dockerfile.slim`). Tested in a clean virtualenv with those packages only: the API started, and
+the synthetic student form went from photo to explanation in **31 s on the CPU path**, with the result
+deleted afterwards. `ocr_confidence` is then `null` (a vision model cannot say how sure it is; the
+pipeline does not invent a number).
+
+Measured with the 20-page OCR set (`python eval/ocr_cer.py --engines gemini`, full table in
+`eval/results/ocr_cer.md`):
+
+| | PaddleOCR (default) | Gemini `3.5-flash-lite` |
+|---|---|---|
+| Mean character recall, 20 pages | 89.6% | **94.3%** |
+| Plain-text contracts (8 pages): error rate | 2-5% | **0.0%** |
+| Shaky photos: recall | 78% | **95%** |
+| Time per page | 1.0 s (GPU) | 5.5 s (no GPU) |
+
+Two failure modes were found, and one is not fixed:
+- **Looping** (fixed): on one phone photo it repeated a line 209 times (error rate 410%). The engine
+  now drops the 7th and later copies of an identical line (error rate on that page: 35%).
+- **Silent omission** (NOT fixed): on one low-resolution page it dropped about 40% of the text
+  (recall 57% against PaddleOCR's 74%). A missing clause is a missing warning, and the user is not told.
+  With PaddleOCR the same page loses less. Until this is addressed, treat Gemini OCR as a demo path
+  and keep PaddleOCR where a GPU is available. Likely mitigations to try: send the original resolution,
+  or ask for the page in two halves.
+
 **Backend** (plan A): run the API as in "Run the API", then expose it, e.g. with a Cloudflare quick tunnel:
 
 ```bash
@@ -217,6 +246,11 @@ variable `NEXT_PUBLIC_API_URL=https://<your backend URL>`. The production build 
 Content-Security-Policy (the page may only talk to itself and that API), `X-Frame-Options: DENY`,
 `nosniff`, `Referrer-Policy: no-referrer`. The API sends `no-store` on every response. Changing the
 API URL needs a rebuild because it is baked into the page (and into the CSP).
+
+**Free always-on hosting (plan D) is a moving target.** Most free container hosts put an idle app to
+sleep (a slow first request after a pause); a few advertise no sleep (a web search in Nov 2026 named
+Koyeb, Fly.io and Zeabur, from secondary sources). Check the provider's current pricing page before
+choosing, and set the host's `CORS_ORIGINS` to your Vercel URL. `backend/Dockerfile.slim` reads `$PORT`.
 
 **Not done:** nothing is deployed yet. A deployment needs your Vercel account and a decision on the
 backend plan, which are yours to make.
@@ -295,7 +329,8 @@ text layer lists table cells in a different order than OCR reads them, so for th
 | Table-heavy forms (3 pages), 12 samples | 23-79% (reading order) | 79-90% |
 | By condition, all pages: clean / low-res / photo / shaky | 22 / 28 / 28 / 38% | 96 / 90 / 94 / 78% |
 
-Preprocessing (resize, blur check, deskew) helps only on the shaky samples (CER 41% -> 38%); on
+A Gemini vision-model engine was added later and measured on the same pages (see "Cloud OCR with Gemini" above:
+recall 94.3% vs 89.6%, but one silent-omission failure). Preprocessing (resize, blur check, deskew) helps only on the shaky samples (CER 41% -> 38%); on
 clean photos it changes nothing. The English re-read for Latin pages changes nothing on Korean
 documents. Both stay, but they are not where the accuracy comes from. Known limit: on a tilted
 photo of a table, line order can scramble (one synthetic photo: CER 15% with 99.8% recall).

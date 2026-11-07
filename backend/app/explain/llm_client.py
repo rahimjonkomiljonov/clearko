@@ -73,6 +73,21 @@ class GeminiClient(LLMClient):
             seed=7,
             max_output_tokens=8192,
         )
+        return self._call(contents, config)
+
+    def transcribe(self, image_jpeg: bytes, instruction: str) -> str:
+        """Plain-text answer about one image (used for OCR). The image LEAVES the machine."""
+        from google.genai import types
+
+        contents = [types.Content(role="user", parts=[
+            types.Part.from_bytes(data=image_jpeg, mime_type="image/jpeg"),
+            types.Part(text=instruction),
+        ])]
+        config = types.GenerateContentConfig(temperature=0.0, seed=7, max_output_tokens=8192)
+        return self._call(contents, config)
+
+    def _call(self, contents, config) -> str:
+        resp = None
         for attempt in range(self._retries + 1):
             self._pace()
             try:
@@ -87,7 +102,7 @@ class GeminiClient(LLMClient):
                     continue
                 hint = " (rate limit: wait a minute)" if code == 429 else ""
                 raise LLMError(f"Gemini request failed: {type(e).__name__} {code or ''}{hint}") from None
-        if not resp.text:
+        if resp is None or not resp.text:
             raise LLMError("Gemini returned an empty response (possibly blocked)")
         return resp.text
 

@@ -36,6 +36,7 @@ for Uzbek. 147 backend and 10 frontend tests.
 | Do not review the printed standard articles | Review everything | The small model explained printed Article 4 *backwards* (it said the landlord could not terminate). A wrong explanation is worse than none, so only clauses added to the contract are judged. |
 | Deterministic rules next to the model | Model only | A minimum-wage check is arithmetic, not opinion. The plain prompt missed it on every document, and the clause review missed several such facts (wage, rest day, employer-held deposit) until they became rules. A fixed seed and keyword floors reduced the run-to-run variation in severity. |
 | Show the scan's own Korean text with every flag | Show the model's paraphrase | A quote that cannot be found in the scan is hidden, so the page never shows invented Korean. |
+| Let a Gemini vision model read pages as an optional OCR engine | PaddleOCR only | Mean recall 94.3% vs 89.6% and 0% error on the plain-text contracts, with no GPU needed, which is what makes a free always-on demo possible. But it looped on one photo (fixed with a repeat cap) and silently dropped 40% of one low-resolution page (not fixed), so it is a demo path, not the default. |
 | Jobs with polling | One long request | An analysis takes 20-100 s; mobile connections drop. |
 
 ## What went wrong (and what it taught)

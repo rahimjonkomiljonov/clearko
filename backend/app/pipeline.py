@@ -121,7 +121,8 @@ def read_pages(
         ocr_pages += 1
         if result.lines:
             texts.append(result.full_text)
-            confs.append(result.mean_confidence)
+            if engine.has_confidence:
+                confs.append(result.mean_confidence)
         if on_stage:
             on_stage(f"page {n}/{len(pages)} read")
     text = "\n\n".join(f"--- page {i} ---\n{t}" for i, t in enumerate(texts, 1))

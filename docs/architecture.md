@@ -71,7 +71,8 @@ flowchart TD
 ## Swappable parts
 
 - **OCR** sits behind `OCREngine` (`backend/app/ocr/base.py`): `recognize(image) -> OCRResult`.
-  Only PaddleOCR is implemented. EasyOCR was not added, because it needs `torch`, which conflicts
-  with Paddle (see above).
+  Two engines: PaddleOCR (local, needs a GPU to be fast) and a Gemini vision model (cloud, no GPU,
+  `OCR_ENGINE=gemini`; no confidence score, page images leave the machine). EasyOCR was not added,
+  because it needs `torch`, which conflicts with Paddle (see above).
 - **LLM** sits behind `LLMClient` (`backend/app/explain/llm_client.py`): Ollama (default) and Gemini.
 - **Translators** sit behind `StringTranslator` (`backend/app/explain/translate.py`).
