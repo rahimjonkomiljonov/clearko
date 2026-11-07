@@ -122,6 +122,7 @@ def main() -> None:
     ap.add_argument("--only", nargs="*", help="document names to run")
     ap.add_argument("--lang", default="en")
     ap.add_argument("--no-baseline", action="store_true")
+    ap.add_argument("--tag", default="", help="suffix for the output files, e.g. gemini")
     args = ap.parse_args()
 
     cfg = get_settings()
@@ -129,12 +130,19 @@ def main() -> None:
     engine = get_engine(cfg.ocr_engine, cfg.ocr_device)
     # the baseline answers in free text; ClearKo's own calls keep the JSON-constrained client
     plain = OllamaClient(cfg.llm_model, cfg.llm_base_url or "http://localhost:11434", force_json=False)
-    (RESULTS / "review").mkdir(parents=True, exist_ok=True)
-    (RESULTS / "raw" / "review").mkdir(parents=True, exist_ok=True)
+    tag = f"_{args.tag}" if args.tag else ""
+    cloud = cfg.llm_provider != "ollama"
+    review_dir, raw_review_dir = RESULTS / f"review{tag}", RESULTS / "raw" / f"review{tag}"
+    review_dir.mkdir(parents=True, exist_ok=True)
+    raw_review_dir.mkdir(parents=True, exist_ok=True)
 
     rows = []
     for doc in documents():
         if args.only and doc.name not in args.only:
+            continue
+        if cloud and doc.private:
+            # a cloud model (free tier: the provider may train on it) never sees private documents
+            print(f"skip {doc.name}: private document, not sent to a cloud model")
             continue
         if not all(p.exists() for p in doc.paths):
             print(f"skip {doc.name}: files missing")
@@ -164,19 +172,19 @@ def main() -> None:
                 row["baseline_recall"] = recall(doc.planted, base)
         rows.append(row)
         sheet = review_sheet(doc, result, reading.text, base, secs)
-        out = (RESULTS / "raw" / "review" if doc.private else RESULTS / "review") / f"{doc.name}.md"
+        out = (raw_review_dir if doc.private else review_dir) / f"{doc.name}.md"
         out.write_text(sheet, encoding="utf-8")
         print(json.dumps(row, ensure_ascii=False), flush=True)
 
-    prev_file = RESULTS / "raw" / "pipeline.json"
+    prev_file = RESULTS / "raw" / f"pipeline{tag}.json"
     if args.only and prev_file.exists():  # a partial run updates its rows and keeps the others
         names = {r["doc"] for r in rows}
         keep = [r for r in json.loads(prev_file.read_text(encoding="utf-8")) if r["doc"] not in names]
         order = [d.name for d in documents()]
         rows = sorted(keep + rows, key=lambda r: order.index(r["doc"]))
-    (RESULTS / "raw" / "pipeline.json").write_text(json.dumps(rows, indent=1, ensure_ascii=False), encoding="utf-8")
-    (RESULTS / "pipeline.md").write_text(report(rows), encoding="utf-8")
-    print("wrote", RESULTS / "pipeline.md")
+    (RESULTS / "raw" / f"pipeline{tag}.json").write_text(json.dumps(rows, indent=1, ensure_ascii=False), encoding="utf-8")
+    (RESULTS / f"pipeline{tag}.md").write_text(report(rows), encoding="utf-8")
+    print("wrote", RESULTS / f"pipeline{tag}.md")
 
 
 def report(rows: list[dict]) -> str:

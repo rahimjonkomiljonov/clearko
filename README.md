@@ -166,7 +166,7 @@ local LLM, so it does not fit on Vercel or a small free VM. The frontend does. P
 # backend/.env  (create a key at https://aistudio.google.com; the key never goes into git)
 LLM_PROVIDER=gemini
 LLM_API_KEY=...
-LLM_MODEL=<a current Flash model from AI Studio>
+LLM_MODEL=gemini-3.5-flash-lite      # check with eval/tools/check_gemini.py
 ```
 
 - The LLM then needs no GPU (OCR still does). Gemini writes Russian and Uzbek itself, so Gemma and
@@ -175,11 +175,25 @@ LLM_MODEL=<a current Flash model from AI Studio>
   `/api/health` reports `"llm": "cloud"`, and the web app then shows a notice and a consent box
   before it lets anyone upload, and the privacy page says the same.
 - The free tier allows about 15 requests per minute, so `GeminiClient` spaces calls 4.2 s apart and
-  retries rate-limit and server errors up to 3 times (15 s, 30 s, 45 s). An analysis therefore takes
-  roughly 40-90 s. Limits change often: check AI Studio for the current ones.
-- The Gemini path has only been tested with a fake SDK (8 unit tests). It has **not** been run against
-  the real service yet: that needs your key, then `python eval/run_pipeline.py` with these variables
-  set, to compare planted-problem recall and Uzbek quality with `qwen2.5:7b` before relying on it.
+  retries rate-limit and server errors up to 3 times (15 s, 30 s, 45 s). Limits change often: check AI Studio for the current ones.
+- **Measured on the real service** (8 Nov 2026, `gemini-3.5-flash-lite`, free tier, synthetic and public
+  documents only; the runner refuses to send private documents to a cloud model):
+
+  | | Local `qwen2.5:7b` | Gemini `3.5-flash-lite` |
+  |---|---|---|
+  | Planted problems found (4 synthetic documents, English) | 31 of 32 | 31 of 32 (missed the confidentiality clause on the photo; the local model missed a different one) |
+  | Blank government forms | 0 flags, warned | 0 flags, warned |
+  | Time per document, English | 20-60 s | 3-13 s |
+  | With Uzbek / Russian | about 80-100 s (NLLB) / similar | 29-36 s / 53-68 s |
+
+  Planted-problem counting is keyword-based and English-only, so it cannot score Uzbek or Russian; the
+  flag counts there match English (10 and 6). The Uzbek is fluent and readable, with small slips
+  (for example "eng kam o'ylangan stavka" where "belgilangan" is meant), and still needs a native reader.
+  Results: `eval/results/pipeline_gemini.md`, review sheets in `eval/results/review_gemini*/`.
+- **Pick the model by testing it** (`python eval/tools/check_gemini.py [model]` lists what your key can use
+  and makes one tiny call). On the test day `gemini-flash-latest` timed out (504/503, once 220 s) on a
+  one-line prompt, the 2.5 models returned 404, and `gemini-3.5-flash-lite` answered in about 1.5 s.
+  Availability changes often, so do not hard-code a name from a blog post.
 
 **Backend** (plan A): run the API as in "Run the API", then expose it, e.g. with a Cloudflare quick tunnel:
 
