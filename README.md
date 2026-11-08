@@ -410,7 +410,7 @@ docs/           architecture diagram, case study
 
 ## Licences and credits
 
-Code: no licence has been chosen yet (add one before publishing). PaddleOCR and Ollama models are used
+Code: [MIT](LICENSE), which covers ClearKo's own code only. Third-party parts keep their own terms (below). PaddleOCR and Ollama models are used
 under their own terms. **Uzbek translation uses NLLB-200 (CC-BY-NC 4.0, non-commercial only) and
 EXAONE, if you try it, is also non-commercial.** The public test forms come from the Seoul
 Metropolitan Government and the Ministry of Justice (sources in `eval/data/public/SOURCES.md`) and
