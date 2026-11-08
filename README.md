@@ -11,7 +11,7 @@ red flags (with the original Korean quoted), and to-dos.
   <sub>25-second demo: click to play. Music: Sascha Ende, ende.app (CC BY 4.0).</sub>
 </p>
 
-Status: **all six milestones are done except the actual deployment** (see [Deploy](#deploy)).
+Status: **all six milestones are done.** The demo frontend is deployed on Vercel; its backend runs on the author's own PC, so the live demo works only while that PC is on (see [Deploy](#deploy)).
 Documents: [architecture diagram](docs/architecture.md) | [case study](docs/case-study.md) |
 [project brief](clearko-brief.md) | [evaluation results](eval/results/pipeline.md).
 
