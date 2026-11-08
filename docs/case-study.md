@@ -41,7 +41,7 @@ for Uzbek. 147 backend and 10 frontend tests.
 
 ## What went wrong (and what it taught)
 
-- **The model called a basement unit a "sublet".** The cause was the project's own prompt, which
+- **The model called an ordinary lease a "sublet".** The cause was the project's own prompt, which
   said "do not call it a sublet". The model repeated the word. Telling it the plain fact (the
   landlord rents directly to the tenant) removed the error. *Never name the wrong answer in a prompt.*
 - **Installing the translation library broke OCR.** `torch` and PaddleOCR load different cuDNN

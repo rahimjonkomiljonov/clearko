@@ -6,6 +6,11 @@ red flags (with the original Korean quoted), and to-dos.
 
 > ClearKo explains documents. It is **not legal advice**.
 
+<p align="center">
+  <a href="docs/media/brag.mp4"><img src="docs/media/brag.jpg" alt="ClearKo demo video: a Korean contract, the app, and the red flags with the original Korean quote" width="300"></a><br>
+  <sub>25-second demo: click to play. Music: Sascha Ende, ende.app (CC BY 4.0).</sub>
+</p>
+
 Status: **all six milestones are done except the actual deployment** (see [Deploy](#deploy)).
 Documents: [architecture diagram](docs/architecture.md) | [case study](docs/case-study.md) |
 [project brief](clearko-brief.md) | [evaluation results](eval/results/pipeline.md).
@@ -279,8 +284,8 @@ cd backend && python -m pytest -q
 
 | Sample | Pages | OCR | Explanation | What it found |
 |---|---|---|---|---|
-| Rental contract (real, redacted) | 8 | 3.7 s | ~70 s (en), ~100 s (uz, includes starting NLLB) | broker fee on tenant HIGH, eviction on noise complaints HIGH, repairs, sewer, cleaning, 1/N water fee MEDIUM |
-| Phone plan flyers (real, English) | 2 | 2.4 s | 25 s | price rise 22,900 -> 61,000 KRW HIGH, visa-change cancellation HIGH, 12-month lock, 95-day cancel ban |
+| Rental contract (real, redacted) | 8 | 3.7 s | ~70 s (en), ~100 s (uz, includes starting NLLB) | clauses that shift costs to the tenant or allow termination: 2 HIGH, 3 MEDIUM (details withheld: private document) |
+| Phone plan flyers (real, English) | 2 | 2.4 s | 25 s | a large price rise after the promotion HIGH, cancellation on a visa change HIGH, a long lock-in and a cancellation ban window (details withheld) |
 | Part-time contract (synthetic photo) | 1 | 0.6 s | 44 s | 11 planted problems: 10-11 found (wage, rest day, insurance, cash, no copy, overtime, 50% pay cut, deductions, deposit, NDA) |
 | Student work confirmation (synthetic photo) | 1 | 0.5 s | 19 s | 33 h/week, wage, started before permit, empty school/permit fields, cash: all found |
 
@@ -368,10 +373,9 @@ baseline quotes nothing. ClearKo's one miss is the catch-all clause
 blank leases both gave 0 red flags and the blank-form warning. Before the blank-form check these
 printed legal notices were flagged as risks.
 
-**4. Real documents** (private, redacted): the rental contract gives 5 flags (2 high: the early
-termination penalty with the broker fee on the tenant, and eviction after noise complaints) and the
-phone-plan flyers give 4 (3 high: early termination penalty, visa change and number cancellation,
-price rise after the promotion). 26-60 s each on the RTX 4060 Ti.
+**4. Real documents** (private, redacted): the rental contract gives 5 flags (2 high) and the
+phone-plan flyers give 4 (3 high). What they say is deliberately not published, because the first is a
+real person's contract. 26-60 s each on the RTX 4060 Ti.
 
 **What the evaluation found and fixed**
 - The PDF version of the contract missed the uniform deduction and the employer-held deposit that
